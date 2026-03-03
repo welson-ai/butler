@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount } from 'wagmi'
 import axios from 'axios'
 
-const API_BASE = 'http://localhost:5001'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function App() {
-  const { address, isConnected } = useAccount()
+  const [walletAddress, setWalletAddress] = useState('')
+  const [isConnected, setIsConnected] = useState(false)
   const [balance, setBalance] = useState(null)
   const [chatHistory, setChatHistory] = useState([])
   const [activity, setActivity] = useState([])
@@ -16,11 +15,11 @@ export default function App() {
 
   // Fetch balance every 30 seconds
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !walletAddress) return
 
     const fetchBalance = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/balance/${address}`)
+        const response = await axios.get(`${API_BASE}/api/balance/${walletAddress}`)
         setBalance(response.data)
       } catch (error) {
         console.error('Error fetching balance:', error)
@@ -30,15 +29,15 @@ export default function App() {
     fetchBalance()
     const interval = setInterval(fetchBalance, 30000)
     return () => clearInterval(interval)
-  }, [isConnected, address])
+  }, [isConnected, walletAddress])
 
   // Fetch activity every 10 seconds
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !walletAddress) return
 
     const fetchActivity = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/activity/${address}`)
+        const response = await axios.get(`${API_BASE}/api/activity/${walletAddress}`)
         setActivity(response.data.transactions || [])
       } catch (error) {
         console.error('Error fetching activity:', error)
@@ -61,7 +60,7 @@ export default function App() {
       fetchYields()
     }, 10000)
     return () => clearInterval(interval)
-  }, [isConnected, address])
+  }, [isConnected, walletAddress])
 
   // Initialize chat with Butler greeting
   useEffect(() => {
@@ -90,7 +89,7 @@ export default function App() {
 
     try {
       const response = await axios.post(`${API_BASE}/api/chat`, {
-        wallet_address: address,
+        wallet_address: walletAddress,
         message: userMessage
       })
 
@@ -146,7 +145,7 @@ export default function App() {
           <p className="text-gray-400 mb-8">Powered by x402 on Base</p>
           <div className="bg-[#12121a] p-8 rounded-2xl">
             <p className="text-gray-300 mb-6">Connect your wallet to get started</p>
-            <ConnectButton />
+            <WalletConnect />
           </div>
         </div>
       </div>
@@ -161,7 +160,7 @@ export default function App() {
           <h1 className="text-2xl font-bold">CRYPTO BUTLER</h1>
           <div className="flex items-center gap-4">
             <span className="text-gray-400 text-sm">Powered by x402 on Base</span>
-            <ConnectButton />
+            <WalletConnect />
           </div>
         </div>
       </div>
@@ -174,7 +173,7 @@ export default function App() {
             <h2 className="text-lg font-semibold mb-2">Wallet</h2>
             <div className="bg-[#12121a] p-4 rounded-xl">
               <p className="text-gray-400 text-sm">Connected Address</p>
-              <p className="font-mono text-[#7c3aed]">{formatAddress(address)}</p>
+              <p className="font-mono text-[#7c3aed]">{formatAddress(walletAddress)}</p>
             </div>
           </div>
 
