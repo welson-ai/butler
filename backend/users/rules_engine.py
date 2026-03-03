@@ -27,33 +27,39 @@ class RulesEngine:
             Operational plan dictionary with calculated buckets
         """
         try:
-            usdc_total = parsed_instruction.get('usdc_total', 0)
-            send_amount = parsed_instruction.get('send_amount', 0)
-            buffer_amount = parsed_instruction.get('buffer_amount', 0)
+            usdc_total = float(parsed_instruction.get('usdc_total', 0))
+            send_amount = float(parsed_instruction.get('send_amount', 0))
+            buffer_amount = float(parsed_instruction.get('buffer_amount', 0))
             
-            # Calculate three buckets
-            aave_deposit = usdc_total - send_amount - buffer_amount
-            payment_reserve = send_amount
-            buffer = buffer_amount
+            # If buffer is zero default to 10% of total
+            if buffer_amount == 0:
+                buffer_amount = round(usdc_total * 0.1, 2)
+            
+            aave_deposit = round(usdc_total - send_amount - buffer_amount, 2)
+            
+            # Safety check — aave deposit cannot be negative
+            if aave_deposit < 0:
+                aave_deposit = 0
+                buffer_amount = round(usdc_total - send_amount, 2)
             
             plan = {
                 'wallet_address': wallet_address,
                 'usdc_total': usdc_total,
                 'aave_deposit': aave_deposit,
-                'payment_reserve': payment_reserve,
-                'buffer': buffer,
+                'payment_reserve': send_amount,
+                'buffer': buffer_amount,
                 'send_to_address': parsed_instruction.get('send_to_address', ''),
+                'send_to': parsed_instruction.get('send_to_address', ''),
+                'send_amount': send_amount,
                 'send_schedule': parsed_instruction.get('send_schedule', 'weekly'),
                 'risk_level': parsed_instruction.get('risk_level', 'moderate'),
                 'yield_strategy': parsed_instruction.get('yield_strategy', 'aave_lending'),
                 'created_at': datetime.now().isoformat(),
                 'status': 'active'
             }
-            
             return plan
-            
         except Exception as e:
-            raise ValueError(f"Error building plan: {str(e)}")
+            raise ValueError(f"Failed to build plan: {str(e)}")
     
     def get_next_payment_day(self, schedule: str) -> int:
         """
@@ -84,25 +90,10 @@ class RulesEngine:
         Returns:
             True if valid, raises ValueError if not
         """
-        # Check that aave_deposit is greater than zero
         if plan.get('aave_deposit', 0) <= 0:
             raise ValueError("Aave deposit must be greater than zero")
-        
-        # Check that send_to_address is not empty
-        if not plan.get('send_to_address', '').strip():
-            raise ValueError("Recipient address cannot be empty")
-        
-        # Check that all amounts add up to usdc_total
-        usdc_total = plan.get('usdc_total', 0)
-        aave_deposit = plan.get('aave_deposit', 0)
-        payment_reserve = plan.get('payment_reserve', 0)
-        buffer = plan.get('buffer', 0)
-        
-        calculated_total = aave_deposit + payment_reserve + buffer
-        
-        if abs(calculated_total - usdc_total) > 0.01:  # Allow small floating point differences
-            raise ValueError(f"Amounts don't add up: {aave_deposit} + {payment_reserve} + {buffer} = {calculated_total}, expected {usdc_total}")
-        
+        if not plan.get('send_to_address') and not plan.get('send_to'):
+            raise ValueError("Recipient address is required")
         return True
 
 # Test at bottom
