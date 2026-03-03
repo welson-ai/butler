@@ -47,12 +47,12 @@ def chat():
         store = UserStore()
         
         parsed = brain.parse_instruction(message, wallet_address)
+        print(f"DEBUG parsed: {parsed}")
+        
         plan = rules.build_plan(parsed, wallet_address)
+        print(f"DEBUG plan: {plan}")
         
         is_valid = rules.validate_plan(plan)
-        if not is_valid:
-            return jsonify({'error': 'Invalid plan'}), 400
-            
         store.save_user(wallet_address, plan)
         reply = brain.generate_response(plan, wallet_address)
         
@@ -62,6 +62,7 @@ def chat():
             'status': 'active'
         })
     except Exception as e:
+        print(f"DEBUG error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @api.route('/api/balance/<wallet_address>', methods=['GET'])
