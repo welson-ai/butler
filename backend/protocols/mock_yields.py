@@ -5,83 +5,161 @@ What it returns as output: Mock yield data for testing and demonstration
 """
 
 import random
-from typing import Dict, List, Any
-from datetime import datetime, timedelta
+import datetime
 
-class MockYieldProvider:
+class MockYieldEngine:
     def __init__(self):
-        # TODO: Initialize mock yield data generator
-        pass
-    
-    def get_aave_yield(self) -> float:
         """
-        Generate mock Aave yield rate
+        Initialize MockYieldEngine
+        """
+        # Base protocol rates with risk levels
+        self.PROTOCOLS = {
+            "aave": {"base_apy": 6.0, "risk": "low"},
+            "compound": {"base_apy": 4.0, "risk": "low"},
+            "pendle": {"base_apy": 11.0, "risk": "medium"},
+            "curve": {"base_apy": 8.0, "risk": "low"}
+        }
+        self.risk_flag = False
+    
+    def get_current_yields(self) -> dict:
+        """
+        Get current yields with slight randomization
         
         Returns:
-            Mock APY percentage between 3-8%
+            Dictionary of protocol name to current APY
         """
-        # TODO: Generate realistic mock Aave yield
-        pass
-    
-    def get_alternative_protocol_yields(self) -> Dict[str, float]:
-        """
-        Generate mock yields for alternative protocols
+        yields = {}
+        for protocol, data in self.PROTOCOLS.items():
+            # Vary each by plus or minus 0.5% randomly to simulate real market movement
+            base_apy = data["base_apy"]
+            variation = random.uniform(-0.5, 0.5)
+            current_apy = round(base_apy + variation, 2)
+            yields[protocol] = current_apy
         
-        Returns:
-            Dictionary of protocol names and mock APY rates
-        """
-        # TODO: Generate mock yields for comparison protocols
-        pass
+        return yields
     
-    def get_yield_history(self, protocol: str, days: int = 30) -> List[Dict]:
+    def get_best_yield(self, risk_level: str) -> tuple:
         """
-        Generate mock historical yield data
-        
-        Args:
-            protocol: Protocol name
-            days: Number of days of mock history
-            
-        Returns:
-            List of mock historical yield data points
-        """
-        # TODO: Generate mock yield history with realistic variations
-        pass
-    
-    def simulate_yield_volatility(self, base_apy: float, days: int) -> List[float]:
-        """
-        Simulate realistic yield volatility over time
+        Get best yield for risk level
         
         Args:
-            base_apy: Base APY to simulate around
-            days: Number of days to simulate
+            risk_level: User's risk preference (conservative, moderate, aggressive)
             
         Returns:
-            List of daily APY values with realistic variations
+            Tuple of (protocol_name, apy) with best rate
         """
-        # TODO: Implement yield volatility simulation
-        pass
-    
-    def get_yield_comparison_table(self) -> Dict[str, Any]:
-        """
-        Generate mock yield comparison table for UI display
+        yields = self.get_current_yields()
         
-        Returns:
-            Structured yield comparison data
-        """
-        # TODO: Generate comprehensive yield comparison
-        pass
+        if risk_level.lower() == "conservative":
+            # Only consider aave and compound
+            conservative_protocols = {k: v for k, v in yields.items() if k in ["aave", "compound"]}
+            if not conservative_protocols:
+                return "aave", self.PROTOCOLS["aave"]["base_apy"]
+            best_protocol = max(conservative_protocols, key=lambda k: conservative_protocols[k])
+            return best_protocol, conservative_protocols[best_protocol]
+        
+        elif risk_level.lower() == "moderate":
+            # Consider aave, compound, curve
+            moderate_protocols = {k: v for k, v in yields.items() if k in ["aave", "compound", "curve"]}
+            if not moderate_protocols:
+                return "aave", self.PROTOCOLS["aave"]["base_apy"]
+            best_protocol = max(moderate_protocols, key=lambda k: moderate_protocols[k])
+            return best_protocol, moderate_protocols[best_protocol]
+        
+        elif risk_level.lower() == "aggressive":
+            # Consider all protocols
+            if not yields:
+                return "aave", self.PROTOCOLS["aave"]["base_apy"]
+            best_protocol = max(yields, key=lambda k: yields[k])
+            return best_protocol, yields[best_protocol]
+        
+        else:
+            # Default to moderate
+            return self.get_best_yield("moderate")
     
-    def calculate_mock_earnings(self, principal: float, days: int, protocol: str) -> Dict:
+    def calculate_daily_yield(self, principal: float, apy: float) -> float:
         """
-        Calculate mock earnings for demonstration
+        Calculate daily yield earnings
         
         Args:
             principal: Principal amount in USDC
-            days: Number of days
-            protocol: Protocol name
+            apy: Annual percentage yield
             
         Returns:
-            Mock earnings calculation
+            Daily yield amount earned
         """
-        # TODO: Calculate mock earnings with compound interest
-        pass
+        daily_rate = (apy / 365) / 100
+        return round(principal * daily_rate, 6)
+    
+    def inject_risk_event(self) -> str:
+        """
+        Simulate a protocol risk event
+        
+        Returns:
+            Warning message about risk event
+        """
+        # Drop aave APY to 0.5% suddenly
+        self.PROTOCOLS["aave"]["base_apy"] = 0.5
+        self.risk_flag = True
+        
+        return "Risk detected on Aave. APY dropped to 0.5%. Moving funds to safety."
+    
+    def resolve_risk_event(self) -> str:
+        """
+        Resolve simulated risk event
+        
+        Returns:
+            Recovery message
+        """
+        # Reset aave APY back to normal
+        self.PROTOCOLS["aave"]["base_apy"] = 6.0
+        self.risk_flag = False
+        
+        return "Risk event resolved. Aave APY restored to 6.0%"
+
+# Test at bottom
+if __name__ == "__main__":
+    try:
+        engine = MockYieldEngine()
+        
+        # Print current yields
+        current_yields = engine.get_current_yields()
+        print("Current Yields:")
+        for protocol, apy in current_yields.items():
+            print(f"  {protocol}: {apy}%")
+        
+        print(f"\nRisk Flag: {engine.risk_flag}")
+        
+        # Get best yield for each risk level
+        for risk in ["conservative", "moderate", "aggressive"]:
+            best_protocol, best_apy = engine.get_best_yield(risk)
+            print(f"\nBest {risk} yield: {best_protocol} at {best_apy}%")
+        
+        # Calculate daily yield on 13 USDC at 6% APY
+        daily_yield = engine.calculate_daily_yield(13.0, 6.0)
+        print(f"\nDaily yield on 13 USDC at 6% APY: ${daily_yield}")
+        
+        # Inject risk event
+        print(f"\nInjecting risk event...")
+        warning = engine.inject_risk_event()
+        print(f"WARNING: {warning}")
+        
+        # Show new yields after risk event
+        new_yields = engine.get_current_yields()
+        print(f"\nYields after risk event:")
+        for protocol, apy in new_yields.items():
+            print(f"  {protocol}: {apy}%")
+        
+        # Resolve risk event
+        print(f"\nResolving risk event...")
+        recovery = engine.resolve_risk_event()
+        print(f"INFO: {recovery}")
+        
+        # Final yields
+        final_yields = engine.get_current_yields()
+        print(f"\nFinal yields:")
+        for protocol, apy in final_yields.items():
+            print(f"  {protocol}: {apy}%")
+        
+    except Exception as e:
+        print(f"Test failed: {e}")
