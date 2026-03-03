@@ -37,13 +37,36 @@ class ButlerBrain:
         raise Exception("Claude API overloaded after 3 attempts")
 
     def parse_instruction(self, user_message, wallet_address):
-        try:
-            system = "You are a crypto butler assistant. Extract financial instructions from user messages and return ONLY a valid JSON object with these fields: usdc_total (float), send_amount (float), send_to_address (string), send_schedule (string), risk_level (string), yield_strategy (string), buffer_amount (float). Return ONLY JSON. No explanation. No markdown."
-            result = self._call_claude(system, user_message)
-            return json.loads(result)
-        except Exception as e:
-            print(f"Error parsing instruction: {e}")
-            return {"error": str(e)}
+    try:
+        system = """You are a crypto butler assistant. 
+Extract financial instructions from user messages and return ONLY a valid JSON object.
+No markdown. No backticks. No explanation. Just raw JSON.
+Always return these exact fields:
+{
+    "usdc_total": <float>,
+    "send_amount": <float>,
+    "send_to_address": "<string>",
+    "send_schedule": "<friday|monday|daily|first_of_month>",
+    "risk_level": "<conservative|moderate|aggressive>",
+    "yield_strategy": "aave_lending",
+    "buffer_amount": <float — always 10 percent of usdc_total>
+}"""
+        
+        result = self._call_claude(system, user_message)
+        print(f"DEBUG raw claude response: {repr(result)}")
+        
+        # Strip any accidental markdown
+        result = result.strip()
+        if result.startswith("```"):
+            result = result.split("```")[1]
+            if result.startswith("json"):
+                result = result[4:]
+        result = result.strip()
+        
+        return json.loads(result)
+    except Exception as e:
+        print(f"Error parsing instruction: {e}")
+        return {"error": str(e)}
 
     def generate_response(self, action_taken, user_id):
         try:
