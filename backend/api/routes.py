@@ -42,30 +42,25 @@ def chat():
         wallet_address = data.get('wallet_address')
         message = data.get('message')
         
-        if not wallet_address or not message:
-            return jsonify({'error': 'Missing wallet_address or message'}), 400
+        brain = ButlerBrain()
+        rules = RulesEngine()
+        store = UserStore()
         
-        # Parse instruction
         parsed = brain.parse_instruction(message, wallet_address)
+        plan = rules.build_plan(parsed, wallet_address)
         
-        # Build plan
-        plan = rules_engine.build_plan(parsed, wallet_address)
-        
-        # Validate plan
-        validation = rules_engine.validate_plan(plan)
-        
-        # Save user
-        user_store.save_user(wallet_address, plan)
-        
-        # Generate response
-        response = brain.generate_response(str(plan), wallet_address)
+        is_valid = rules.validate_plan(plan)
+        if not is_valid:
+            return jsonify({'error': 'Invalid plan'}), 400
+            
+        store.save_user(wallet_address, plan)
+        reply = brain.generate_response(plan, wallet_address)
         
         return jsonify({
-            'reply': response,
+            'reply': reply,
             'plan': plan,
-            'status': 'success' if validation.get('valid', False) else 'invalid'
+            'status': 'active'
         })
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
