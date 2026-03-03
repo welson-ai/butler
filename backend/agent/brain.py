@@ -1,9 +1,3 @@
-"""
-What this file does: Claude API integration for processing user instructions
-What it receives as input: User commands and context from the interface
-What it returns as output: Structured actions for the executor to perform
-"""
-
 import anthropic
 import time
 import json
@@ -37,8 +31,8 @@ class ButlerBrain:
         raise Exception("Claude API overloaded after 3 attempts")
 
     def parse_instruction(self, user_message, wallet_address):
-    try:
-        system = """You are a crypto butler assistant. 
+        try:
+            system = """You are a crypto butler assistant.
 Extract financial instructions from user messages and return ONLY a valid JSON object.
 No markdown. No backticks. No explanation. Just raw JSON.
 Always return these exact fields:
@@ -51,22 +45,18 @@ Always return these exact fields:
     "yield_strategy": "aave_lending",
     "buffer_amount": <float — always 10 percent of usdc_total>
 }"""
-        
-        result = self._call_claude(system, user_message)
-        print(f"DEBUG raw claude response: {repr(result)}")
-        
-        # Strip any accidental markdown
-        result = result.strip()
-        if result.startswith("```"):
-            result = result.split("```")[1]
-            if result.startswith("json"):
-                result = result[4:]
-        result = result.strip()
-        
-        return json.loads(result)
-    except Exception as e:
-        print(f"Error parsing instruction: {e}")
-        return {"error": str(e)}
+            result = self._call_claude(system, user_message)
+            print(f"DEBUG raw claude response: {repr(result)}")
+            result = result.strip()
+            if result.startswith("```"):
+                result = result.split("```")[1]
+                if result.startswith("json"):
+                    result = result[4:]
+            result = result.strip()
+            return json.loads(result)
+        except Exception as e:
+            print(f"Error parsing instruction: {e}")
+            return {"error": str(e)}
 
     def generate_response(self, action_taken, user_id):
         try:
@@ -83,14 +73,10 @@ Always return these exact fields:
         except Exception as e:
             return {"error": str(e)}
 
-# Test at bottom
 if __name__ == "__main__":
-    try:
-        brain = ButlerBrain()
-        test_message = "Butler I have 20 USDC. Send 5 USDC to wallet 0xABC123 every Friday. Grow the rest safely."
-        result = brain.parse_instruction(test_message, "0xTEST123")
-        print("Test Result:")
-        print(json.dumps(result, indent=2))
-    except Exception as e:
-        print(f"Test failed: {e}")
-        print("Make sure ANTHROPIC_API_KEY is set in your .env file")
+    brain = ButlerBrain()
+    result = brain.parse_instruction(
+        "Butler I have 20 USDC. Send 5 USDC to wallet 0xABC123 every Friday. Grow the rest safely.",
+        "0xTEST123"
+    )
+    print(json.dumps(result, indent=2))
