@@ -201,6 +201,42 @@ class UserStore:
         # Save back
         with open(tx_file, 'w') as f:
             json.dump({"transactions": transactions}, f, indent=2)
+    
+    def get_transaction_history(self, wallet_address: str) -> list:
+        """
+        Get transaction history for wallet address
+        
+        Args:
+            wallet_address: User's wallet address
+            
+        Returns:
+            List of transactions for that wallet
+        """
+        tx_file = "backend/data/transactions.json"
+        
+        # Ensure transactions file exists
+        if not os.path.exists(tx_file):
+            return []
+        
+        # Load existing transactions
+        with open(tx_file, 'r') as f:
+            data = json.load(f)
+        
+        transactions = data.get('transactions', [])
+        
+        # Filter transactions for this wallet
+        user_transactions = [
+            tx for tx in transactions 
+            if tx.get('wallet_address') == wallet_address
+        ]
+        
+        # Sort by timestamp (newest first)
+        user_transactions.sort(
+            key=lambda x: x.get('timestamp', ''), 
+            reverse=True
+        )
+        
+        return user_transactions
 
 # Test at bottom
 if __name__ == "__main__":
