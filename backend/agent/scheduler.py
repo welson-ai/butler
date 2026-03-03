@@ -223,11 +223,15 @@ class ButlerScheduler:
         try:
             self.scheduler.start()
             print("⏰ Scheduler started. Running daily cycles every 3 minutes.")
+            print("Press Ctrl+C to stop.")
+            
+            # Keep main thread alive
+            while True:
+                import time
+                time.sleep(1)
+                
         except KeyboardInterrupt:
-            print("\n⏹ Scheduler stopped by user")
-            self.scheduler.shutdown()
-        except Exception as e:
-            print(f"❌ Scheduler error: {e}")
+            print("\n⏹ Butler going to sleep.")
             self.scheduler.shutdown()
 
 # Test at bottom
