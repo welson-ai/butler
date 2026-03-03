@@ -8,135 +8,93 @@ import anthropic
 import os
 from dotenv import load_dotenv
 import json
+import time
 
 load_dotenv()
 
 class ButlerBrain:
-    def __init__(self, api_key: str = None):
+    def __init__(self):
         """
         Initialize ButlerBrain with Anthropic API key
-        
-        Args:
-            api_key: Anthropic API key (defaults to environment variable)
         """
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
-        if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required")
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        self.client = anthropic.Anthropic(
+            api_key=os.getenv("ANTHROPIC_API_KEY")
+        )
+        self.model = "claude-sonnet-4-6"
     
-    def parse_instruction(self, user_message: str, wallet_address: str) -> dict:
+    def _retry_api_call(self, func, *args, **kwargs):
+        """
+        Retry wrapper for API calls with exponential backoff
+        """
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except anthropic.APIError as e:
+                if e.error_type == 'overloaded_error' and attempt < max_retries - 1:
+                    print(f"API overloaded, retrying in 3 seconds... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(3)
+                    continue
+                else:
+                    raise e
+            except Exception as e:
+                raise e
+        return None
+    
+    def parse_instruction(self, user_message, wallet_address):
         """
         Parse user instruction into structured JSON using Claude API
-        
-        Args:
-            user_message: User's natural language instruction
-            wallet_address: User's wallet address for context
-            
-        Returns:
-            Structured JSON object with extracted instructions
         """
         try:
-            system_prompt = """You are a crypto butler assistant. Extract financial instructions from user messages and return ONLY a valid JSON object with these fields: usdc_total (float), send_amount (float), send_to_address (string), send_schedule (string — daily/weekly/monday/friday/first_of_month), risk_level (string — conservative/moderate/aggressive), yield_strategy (string — simple description), buffer_amount (float — always 10% of total). If any field is unclear use these defaults: risk_level=moderate, buffer_amount=10% of total, yield_strategy=aave_lending. Return ONLY the JSON. No explanation. No markdown."""
+            def _call_api():
+                return self.client.messages.create(
+                    model=self.model,
+                    max_tokens=1000,
+                    system="You are a crypto butler assistant. Extract financial instructions from user messages and return ONLY a valid JSON object with these fields: usdc_total (float), send_amount (float), send_to_address (string), send_schedule (string), risk_level (string), yield_strategy (string), buffer_amount (float). Return ONLY JSON. No explanation. No markdown.",
+                    messages=[{"role": "user", "content": user_message}]
+                )
             
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1000,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_message}
-                ]
-            )
-            
-            # Extract and parse JSON response
-            content = response.content[0].text.strip()
-            if content.startswith('```json'):
-                content = content.replace('```json', '').replace('```', '').strip()
-            
-            parsed_json = json.loads(content)
-            return parsed_json
-            
+            message = self._retry_api_call(_call_api)
+            return json.loads(message.content[0].text)
         except Exception as e:
             print(f"Error parsing instruction: {e}")
-            return {
-                "usdc_total": 0,
-                "send_amount": 0,
-                "send_to_address": "",
-                "send_schedule": "weekly",
-                "risk_level": "moderate",
-                "yield_strategy": "aave_lending",
-                "buffer_amount": 0,
-                "error": str(e)
-            }
+            return {"error": str(e)}
     
-    def generate_response(self, action_taken: str, user_id: str) -> str:
+    def generate_response(self, action_taken, user_id):
         """
         Generate friendly natural language response for completed action
-        
-        Args:
-            action_taken: Description of action that was completed
-            user_id: User's unique identifier
-            
-        Returns:
-            Natural language response string
         """
         try:
-            system_prompt = "You are a friendly crypto butler. Summarize what you just did in 2 sentences maximum. Be warm, clear, and reassuring. No technical jargon."
+            def _call_api():
+                return self.client.messages.create(
+                    model=self.model,
+                    max_tokens=200,
+                    system="You are a friendly crypto butler. Summarize what you just did in 2 sentences maximum. Be warm, clear, and reassuring. No technical jargon.",
+                    messages=[{"role": "user", "content": str(action_taken)}]
+                )
             
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=200,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": f"I just completed this action: {action_taken}"}
-                ]
-            )
-            
-            return response.content[0].text.strip()
-            
+            message = self._retry_api_call(_call_api)
+            return message.content[0].text
         except Exception as e:
-            print(f"Error generating response: {e}")
-            return f"I've completed your request. Your crypto is working for you."
+            return f"Your funds are being managed safely. Error: {str(e)}"
     
-    def assess_risk(self, yield_data: dict, user_rules: dict) -> dict:
+    def assess_risk(self, yield_data, user_rules):
         """
         Assess risk and provide recommendations based on yield data and user rules
-        
-        Args:
-            yield_data: Current yield data from protocols
-            user_rules: User's risk preferences and rules
-            
-        Returns:
-            Risk assessment JSON with recommendations
         """
         try:
-            system_prompt = "You are a DeFi risk analyst. Given current yield rates and user risk profile, return ONLY a JSON with: recommended_protocol (string), recommended_apy (float), risk_flag (boolean), reason (string)"
+            def _call_api():
+                return self.client.messages.create(
+                    model=self.model,
+                    max_tokens=500,
+                    system="You are a DeFi risk analyst. Return ONLY a JSON with: recommended_protocol (string), recommended_apy (float), risk_flag (boolean), reason (string)",
+                    messages=[{"role": "user", "content": f"Yield data: {yield_data}. User rules: {user_rules}"}]
+                )
             
-            user_context = f"Current yields: {json.dumps(yield_data)}\nUser rules: {json.dumps(user_rules)}"
-            
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=500,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_context}
-                ]
-            )
-            
-            content = response.content[0].text.strip()
-            if content.startswith('```json'):
-                content = content.replace('```json', '').replace('```', '').strip()
-            
-            return json.loads(content)
-            
+            message = self._retry_api_call(_call_api)
+            return json.loads(message.content[0].text)
         except Exception as e:
-            print(f"Error assessing risk: {e}")
-            return {
-                "recommended_protocol": "aave",
-                "recommended_apy": 5.0,
-                "risk_flag": False,
-                "reason": "Using default safe option due to analysis error",
-                "error": str(e)
-            }
+            return {"error": str(e)}
 
 # Test at bottom
 if __name__ == "__main__":
