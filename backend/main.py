@@ -10,8 +10,7 @@ from flask_socketio import SocketIO
 from dotenv import load_dotenv
 import os
 
-from api.routes import APIRoutes
-from api.websocket import WebSocketHandler
+from api.routes import api
 from utils.logger import ButlerLogger
 
 def create_app():
@@ -21,15 +20,31 @@ def create_app():
     Returns:
         Configured Flask app instance
     """
-    # TODO: Initialize Flask app with configuration
-    pass
+    app = Flask(__name__)
+    
+    # Enable CORS for all routes
+    CORS(app)
+    
+    # Register blueprint
+    app.register_blueprint(api, url_prefix='/')
+    
+    return app
 
 def main():
     """
     Main entry point for the backend server
     """
-    # TODO: Start the backend server
-    pass
+    # Load environment variables
+    load_dotenv()
+    
+    # Create Flask app
+    app = create_app()
+    
+    # Print startup message
+    print("Butler API running on port 5001")
+    
+    # Run on port 5001
+    app.run(host='0.0.0.0', port=5001, debug=True)
 
 if __name__ == '__main__':
     main()
