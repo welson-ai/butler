@@ -39,7 +39,7 @@ class ButlerBrain:
             system_prompt = """You are a crypto butler assistant. Extract financial instructions from user messages and return ONLY a valid JSON object with these fields: usdc_total (float), send_amount (float), send_to_address (string), send_schedule (string — daily/weekly/monday/friday/first_of_month), risk_level (string — conservative/moderate/aggressive), yield_strategy (string — simple description), buffer_amount (float — always 10% of total). If any field is unclear use these defaults: risk_level=moderate, buffer_amount=10% of total, yield_strategy=aave_lending. Return ONLY the JSON. No explanation. No markdown."""
             
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-6",
                 max_tokens=1000,
                 system=system_prompt,
                 messages=[
@@ -83,7 +83,7 @@ class ButlerBrain:
             system_prompt = "You are a friendly crypto butler. Summarize what you just did in 2 sentences maximum. Be warm, clear, and reassuring. No technical jargon."
             
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-6",
                 max_tokens=200,
                 system=system_prompt,
                 messages=[
@@ -114,7 +114,7 @@ class ButlerBrain:
             user_context = f"Current yields: {json.dumps(yield_data)}\nUser rules: {json.dumps(user_rules)}"
             
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-sonnet-4-6",
                 max_tokens=500,
                 system=system_prompt,
                 messages=[

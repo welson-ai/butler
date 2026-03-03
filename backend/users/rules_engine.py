@@ -4,151 +4,136 @@ What it receives as input: Natural language instructions and user context
 What it returns as output: Structured automation rules and action plans
 """
 
-import re
-from typing import Dict, List, Any, Optional
+import json
+import os
 from datetime import datetime
 
 class RulesEngine:
     def __init__(self):
-        # TODO: Initialize rules processing engine
+        """
+        Initialize RulesEngine
+        """
         pass
     
-    def parse_instruction(self, instruction: str, user_context: Dict) -> Dict:
+    def build_plan(self, parsed_instruction: dict, wallet_address: str) -> dict:
         """
-        Parse natural language instruction into structured rule
+        Build operational plan from parsed instruction
         
         Args:
-            instruction: User's natural language instruction
-            user_context: Current user state and context
+            parsed_instruction: JSON output from brain.py
+            wallet_address: User's wallet address
             
         Returns:
-            Structured rule representation
+            Operational plan dictionary with calculated buckets
         """
-        # TODO: Implement natural language parsing
-        pass
+        try:
+            usdc_total = parsed_instruction.get('usdc_total', 0)
+            send_amount = parsed_instruction.get('send_amount', 0)
+            buffer_amount = parsed_instruction.get('buffer_amount', 0)
+            
+            # Calculate three buckets
+            aave_deposit = usdc_total - send_amount - buffer_amount
+            payment_reserve = send_amount
+            buffer = buffer_amount
+            
+            plan = {
+                'wallet_address': wallet_address,
+                'usdc_total': usdc_total,
+                'aave_deposit': aave_deposit,
+                'payment_reserve': payment_reserve,
+                'buffer': buffer,
+                'send_to_address': parsed_instruction.get('send_to_address', ''),
+                'send_schedule': parsed_instruction.get('send_schedule', 'weekly'),
+                'risk_level': parsed_instruction.get('risk_level', 'moderate'),
+                'yield_strategy': parsed_instruction.get('yield_strategy', 'aave_lending'),
+                'created_at': datetime.now().isoformat(),
+                'status': 'active'
+            }
+            
+            return plan
+            
+        except Exception as e:
+            raise ValueError(f"Error building plan: {str(e)}")
     
-    def create_payment_rule(self, amount: float, recipient: str, schedule: str) -> Dict:
+    def get_next_payment_day(self, schedule: str) -> int:
         """
-        Create automated payment rule
+        Calculate test cycles until next payment
         
         Args:
-            amount: Amount to send
-            recipient: Recipient address
-            schedule: Payment schedule (daily, weekly, monthly, etc.)
+            schedule: Payment schedule string
             
         Returns:
-            Structured payment rule
+            Number of test cycles (1 cycle = 1 day)
         """
-        # TODO: Implement payment rule creation
-        pass
+        schedule_map = {
+            'friday': 7,
+            'monday': 7,
+            'first_of_month': 30,
+            'daily': 1
+        }
+        
+        return schedule_map.get(schedule.lower(), 7)  # Default to weekly
     
-    def create_yield_rule(self, strategy: str, threshold: float, action: str) -> Dict:
+    def validate_plan(self, plan: dict) -> bool:
         """
-        Create yield optimization rule
+        Validate operational plan
         
         Args:
-            strategy: Yield strategy (conservative, moderate, aggressive)
-            threshold: Yield threshold for actions
-            action: Action to take when threshold met
+            plan: Operational plan to validate
             
         Returns:
-            Structured yield rule
+            True if valid, raises ValueError if not
         """
-        # TODO: Implement yield rule creation
-        pass
-    
-    def validate_rule(self, rule: Dict, user_context: Dict) -> bool:
-        """
-        Validate rule against user constraints and risk level
+        # Check that aave_deposit is greater than zero
+        if plan.get('aave_deposit', 0) <= 0:
+            raise ValueError("Aave deposit must be greater than zero")
         
-        Args:
-            rule: Proposed rule to validate
-            user_context: User's current state and settings
-            
-        Returns:
-            True if rule is valid and safe
-        """
-        # TODO: Implement rule validation logic
-        pass
-    
-    def execute_rule(self, rule: Dict, user_context: Dict) -> Dict:
-        """
-        Execute automation rule
+        # Check that send_to_address is not empty
+        if not plan.get('send_to_address', '').strip():
+            raise ValueError("Recipient address cannot be empty")
         
-        Args:
-            rule: Rule to execute
-            user_context: Current user context
-            
-        Returns:
-            Execution result and any actions taken
-        """
-        # TODO: Implement rule execution
-        pass
-    
-    def get_active_rules(self, user_id: str) -> List[Dict]:
-        """
-        Get all active rules for user
+        # Check that all amounts add up to usdc_total
+        usdc_total = plan.get('usdc_total', 0)
+        aave_deposit = plan.get('aave_deposit', 0)
+        payment_reserve = plan.get('payment_reserve', 0)
+        buffer = plan.get('buffer', 0)
         
-        Args:
-            user_id: Unique user identifier
-            
-        Returns:
-            List of active rules
-        """
-        # TODO: Fetch active rules for user
-        pass
-    
-    def pause_rule(self, user_id: str, rule_id: str) -> bool:
-        """
-        Pause specific rule
+        calculated_total = aave_deposit + payment_reserve + buffer
         
-        Args:
-            user_id: Unique user identifier
-            rule_id: Rule identifier to pause
-            
-        Returns:
-            True if rule paused successfully
-        """
-        # TODO: Implement rule pausing
-        pass
-    
-    def resume_rule(self, user_id: str, rule_id: str) -> bool:
-        """
-        Resume paused rule
+        if abs(calculated_total - usdc_total) > 0.01:  # Allow small floating point differences
+            raise ValueError(f"Amounts don't add up: {aave_deposit} + {payment_reserve} + {buffer} = {calculated_total}, expected {usdc_total}")
         
-        Args:
-            user_id: Unique user identifier
-            rule_id: Rule identifier to resume
-            
-        Returns:
-            True if rule resumed successfully
-        """
-        # TODO: Implement rule resumption
-        pass
-    
-    def delete_rule(self, user_id: str, rule_id: str) -> bool:
-        """
-        Delete automation rule
+        return True
+
+# Test at bottom
+if __name__ == "__main__":
+    try:
+        engine = RulesEngine()
         
-        Args:
-            user_id: Unique user identifier
-            rule_id: Rule identifier to delete
-            
-        Returns:
-            True if rule deleted successfully
-        """
-        # TODO: Implement rule deletion
-        pass
-    
-    def explain_rule(self, rule: Dict) -> str:
-        """
-        Generate human-readable explanation of rule
+        # Sample parsed instruction matching brain.py output
+        sample_instruction = {
+            "usdc_total": 20.0,
+            "send_amount": 5.0,
+            "send_to_address": "0xABC123",
+            "send_schedule": "friday",
+            "risk_level": "conservative",
+            "yield_strategy": "aave_lending",
+            "buffer_amount": 2.0
+        }
         
-        Args:
-            rule: Rule to explain
-            
-        Returns:
-            Natural language explanation
-        """
-        # TODO: Generate rule explanation
-        pass
+        # Build plan
+        plan = engine.build_plan(sample_instruction, "0xTEST123")
+        
+        # Validate plan
+        engine.validate_plan(plan)
+        
+        # Print result cleanly
+        print("Plan Result:")
+        print(json.dumps(plan, indent=2))
+        
+        # Test next payment day calculation
+        next_payment = engine.get_next_payment_day(plan['send_schedule'])
+        print(f"\nNext payment in {next_payment} test cycles")
+        
+    except Exception as e:
+        print(f"Test failed: {e}")

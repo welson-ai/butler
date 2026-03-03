@@ -6,143 +6,239 @@ What it returns as output: User information and configuration data
 
 import json
 import os
-from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 class UserStore:
-    def __init__(self, data_file: str = "data/users.json"):
+    def __init__(self, data_file: str = "backend/data/users.json"):
         """
         Initialize user data store
         
         Args:
             data_file: Path to user data JSON file
         """
-        # TODO: Initialize data store and load existing data
-        pass
+        self.data_file = data_file
+        self.ensure_data_file_exists()
     
-    def create_user(self, user_data: Dict) -> bool:
+    def ensure_data_file_exists(self):
         """
-        Create new user with initial data
+        Ensure data file exists with proper structure
+        """
+        if not os.path.exists(self.data_file):
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
+            with open(self.data_file, 'w') as f:
+                json.dump({"users": []}, f, indent=2)
+    
+    def load_data(self) -> dict:
+        """
+        Load data from JSON file
+        
+        Returns:
+            Loaded data dictionary
+        """
+        try:
+            with open(self.data_file, 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {"users": []}
+    
+    def save_data(self, data: dict):
+        """
+        Save data to JSON file
         
         Args:
-            user_data: User information and initial configuration
-            
-        Returns:
-            True if user created successfully
+            data: Data dictionary to save
         """
-        # TODO: Implement user creation with validation
-        pass
+        with open(self.data_file, 'w') as f:
+            json.dump(data, f, indent=2)
     
-    def get_user(self, user_id: str) -> Optional[Dict]:
+    def save_user(self, wallet_address: str, plan: dict) -> str:
         """
-        Get user data by ID
+        Save or update user with their operational plan
         
         Args:
-            user_id: Unique user identifier
+            wallet_address: User's wallet address
+            plan: Operational plan from rules_engine
             
         Returns:
-            User data or None if not found
+            Success message
         """
-        # TODO: Implement user retrieval
-        pass
+        data = self.load_data()
+        users = data.get('users', [])
+        
+        # Find existing user or create new one
+        existing_user = None
+        for user in users:
+            if user.get('wallet_address') == wallet_address:
+                existing_user = user
+                break
+        
+        if existing_user:
+            # Update existing user
+            existing_user.update({
+                'wallet_address': wallet_address,
+                'usdc_balance': plan.get('usdc_total', 0),
+                'aave_deposit': plan.get('aave_deposit', 0),
+                'buffer': plan.get('buffer', 0),
+                'payment_reserve': plan.get('payment_reserve', 0),
+                'yield_earned': existing_user.get('yield_earned', 0),  # Preserve existing yield
+                'rules': {
+                    'send_amount': plan.get('payment_reserve', 0),
+                    'send_to': plan.get('send_to_address', ''),
+                    'send_schedule': plan.get('send_schedule', 'weekly'),
+                    'risk_level': plan.get('risk_level', 'moderate')
+                }
+            })
+            message = f"Updated existing user {wallet_address}"
+        else:
+            # Add new user
+            new_user = {
+                'user_id': f"user_{len(users) + 1:03d}",
+                'wallet_address': wallet_address,
+                'usdc_balance': plan.get('usdc_total', 0),
+                'aave_deposit': plan.get('aave_deposit', 0),
+                'buffer': plan.get('buffer', 0),
+                'payment_reserve': plan.get('payment_reserve', 0),
+                'yield_earned': 0,
+                'rules': {
+                    'send_amount': plan.get('payment_reserve', 0),
+                    'send_to': plan.get('send_to_address', ''),
+                    'send_schedule': plan.get('send_schedule', 'weekly'),
+                    'risk_level': plan.get('risk_level', 'moderate')
+                }
+            }
+            users.append(new_user)
+            message = f"Created new user {wallet_address}"
+        
+        self.save_data({"users": users})
+        return message
     
-    def update_user(self, user_id: str, updates: Dict) -> bool:
+    def get_user(self, wallet_address: str) -> dict:
         """
-        Update user data
+        Get user data by wallet address
         
         Args:
-            user_id: Unique user identifier
-            updates: Data to update
+            wallet_address: User's wallet address
             
         Returns:
-            True if update successful
+            User data dictionary or None if not found
         """
-        # TODO: Implement user data updates
-        pass
-    
-    def delete_user(self, user_id: str) -> bool:
-        """
-        Delete user and all associated data
+        data = self.load_data()
+        users = data.get('users', [])
         
-        Args:
-            user_id: Unique user identifier
-            
-        Returns:
-            True if user deleted successfully
-        """
-        # TODO: Implement user deletion and cleanup
-        pass
-    
-    def get_user_by_wallet(self, wallet_address: str) -> Optional[Dict]:
-        """
-        Get user by wallet address
+        for user in users:
+            if user.get('wallet_address') == wallet_address:
+                return user
         
-        Args:
-            wallet_address: Wallet address to search for
-            
-        Returns:
-            User data or None if not found
-        """
-        # TODO: Implement wallet address lookup
-        pass
+        return None
     
-    def update_user_balance(self, user_id: str, balance_data: Dict) -> bool:
-        """
-        Update user's balance information
-        
-        Args:
-            user_id: Unique user identifier
-            balance_data: New balance information
-            
-        Returns:
-            True if balance updated successfully
-        """
-        # TODO: Implement balance updates
-        pass
-    
-    def update_user_rules(self, user_id: str, rules: Dict) -> bool:
-        """
-        Update user's automation rules
-        
-        Args:
-            user_id: Unique user identifier
-            rules: New automation rules
-            
-        Returns:
-            True if rules updated successfully
-        """
-        # TODO: Implement rules updates
-        pass
-    
-    def get_all_users(self) -> List[Dict]:
+    def get_all_users(self) -> list:
         """
         Get all users in the system
         
         Returns:
             List of all user data
         """
-        # TODO: Implement user listing
-        pass
+        data = self.load_data()
+        return data.get('users', [])
     
-    def backup_user_data(self) -> bool:
+    def update_balance(self, wallet_address: str, new_aave_deposit: float, yield_earned: float = 0):
         """
-        Create backup of user data
-        
-        Returns:
-            True if backup created successfully
-        """
-        # TODO: Implement data backup
-        pass
-    
-    def restore_user_data(self, backup_file: str) -> bool:
-        """
-        Restore user data from backup
+        Update user's balance information
         
         Args:
-            backup_file: Path to backup file
-            
-        Returns:
-            True if restore successful
+            wallet_address: User's wallet address
+            new_aave_deposit: New Aave deposit amount
+            yield_earned: Additional yield earned
         """
-        # TODO: Implement data restoration
-        pass
+        data = self.load_data()
+        users = data.get('users', [])
+        
+        for user in users:
+            if user.get('wallet_address') == wallet_address:
+                user['aave_deposit'] = new_aave_deposit
+                current_yield = user.get('yield_earned', 0)
+                user['yield_earned'] = current_yield + yield_earned
+                break
+        
+        self.save_data({"users": users})
+    
+    def log_transaction(self, wallet_address: str, tx_type: str, amount: float, tx_hash: str):
+        """
+        Log transaction to transactions file
+        
+        Args:
+            wallet_address: User's wallet address
+            tx_type: Transaction type
+            amount: Transaction amount
+            tx_hash: Blockchain transaction hash
+        """
+        tx_file = "backend/data/transactions.json"
+        
+        # Ensure transactions file exists
+        if not os.path.exists(tx_file):
+            os.makedirs(os.path.dirname(tx_file), exist_ok=True)
+            with open(tx_file, 'w') as f:
+                json.dump({"transactions": []}, f, indent=2)
+        
+        # Load existing transactions
+        with open(tx_file, 'r') as f:
+            data = json.load(f)
+        
+        transactions = data.get('transactions', [])
+        
+        # Add new transaction
+        new_tx = {
+            'wallet_address': wallet_address,
+            'tx_type': tx_type,
+            'amount': amount,
+            'tx_hash': tx_hash,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        transactions.append(new_tx)
+        
+        # Save back
+        with open(tx_file, 'w') as f:
+            json.dump({"transactions": transactions}, f, indent=2)
+
+# Test at bottom
+if __name__ == "__main__":
+    try:
+        store = UserStore()
+        
+        # Save a test user
+        test_plan = {
+            'usdc_total': 20.0,
+            'aave_deposit': 13.0,
+            'payment_reserve': 5.0,
+            'buffer': 2.0,
+            'send_to_address': '0xABC123',
+            'send_schedule': 'friday',
+            'risk_level': 'conservative',
+            'yield_strategy': 'aave_lending'
+        }
+        
+        # Test save_user
+        result = store.save_user("0xTEST123", test_plan)
+        print(f"Save result: {result}")
+        
+        # Test get_user
+        user = store.get_user("0xTEST123")
+        print(f"Retrieved user: {json.dumps(user, indent=2) if user else 'Not found'}")
+        
+        # Test get_all_users
+        all_users = store.get_all_users()
+        print(f"Total users: {len(all_users)}")
+        
+        # Test update_balance
+        store.update_balance("0xTEST123", 15.0, 0.5)
+        updated_user = store.get_user("0xTEST123")
+        print(f"Updated balance: {json.dumps(updated_user, indent=2)}")
+        
+        # Test log_transaction
+        store.log_transaction("0xTEST123", "deposit", 13.0, "0xabc123def")
+        print("Transaction logged successfully")
+        
+    except Exception as e:
+        print(f"Test failed: {e}")
