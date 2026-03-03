@@ -1,0 +1,49 @@
+{
+  "users": [
+    {
+      "user_id": "john_001",
+      "wallet_address": "",
+      "usdc_balance": 20,
+      "aave_deposit": 13,
+      "buffer": 2,
+      "payment_reserve": 5,
+      "yield_earned": 0,
+      "rules": {
+        "send_amount": 5,
+        "send_to": "",
+        "send_schedule": "friday",
+        "risk_level": "moderate"
+      }
+    },
+    {
+      "user_id": "amina_002",
+      "wallet_address": "",
+      "usdc_balance": 50,
+      "aave_deposit": 35,
+      "buffer": 5,
+      "payment_reserve": 10,
+      "yield_earned": 0,
+      "rules": {
+        "send_amount": 10,
+        "send_to": "",
+        "send_schedule": "monday",
+        "risk_level": "conservative"
+      }
+    },
+    {
+      "user_id": "brian_003",
+      "wallet_address": "",
+      "usdc_balance": 100,
+      "aave_deposit": 70,
+      "buffer": 10,
+      "payment_reserve": 20,
+      "yield_earned": 0,
+      "rules": {
+        "send_amount": 20,
+        "send_to": "",
+        "send_schedule": "first_of_month",
+        "risk_level": "aggressive"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+anthropic
+web3
+apscheduler
+flask
+flask-cors
+flask-socketio
+python-dotenv
+requests
+eth-account
