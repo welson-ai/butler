@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import axios from 'axios'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
@@ -145,7 +146,7 @@ export default function App() {
           <p className="text-gray-400 mb-8">Powered by x402 on Base</p>
           <div className="bg-[#12121a] p-8 rounded-2xl">
             <p className="text-gray-300 mb-6">Connect your wallet to get started</p>
-            <WalletConnect />
+            <ConnectButton />
           </div>
         </div>
       </div>
@@ -160,7 +161,7 @@ export default function App() {
           <h1 className="text-2xl font-bold">CRYPTO BUTLER</h1>
           <div className="flex items-center gap-4">
             <span className="text-gray-400 text-sm">Powered by x402 on Base</span>
-            <WalletConnect />
+            <ConnectButton />
           </div>
         </div>
       </div>
