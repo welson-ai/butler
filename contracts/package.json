@@ -1,0 +1,1 @@
+{"name": "butler-contracts", "version": "1.0.0", "devDependencies": {"hardhat": "^2.19.0", "@nomicfoundation/hardhat-toolbox": "^4.0.0", "@openzeppelin/contracts": "^5.0.0"}}
