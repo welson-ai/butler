@@ -49,6 +49,13 @@ def chat():
         parsed = brain.parse_instruction(message, wallet_address)
         print(f"DEBUG parsed: {parsed}")
         
+        if 'error' in parsed or parsed.get('usdc_total', 0) == 0:
+            return jsonify({
+                'reply': "Hello! To get started tell me: how much USDC you have, where to send payments, and how often. For example: I have 20 USDC. Send 5 to wallet 0xABC123 every Friday and grow the rest safely.",
+                'plan': None,
+                'status': 'awaiting_instruction'
+            })
+        
         plan = rules.build_plan(parsed, wallet_address)
         print(f"DEBUG plan: {plan}")
         
