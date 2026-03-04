@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { useAccount } from 'wagmi'
 import axios from 'axios'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
+const API_BASE = 'http://localhost:5001'
 
 export default function App() {
-  const [walletAddress, setWalletAddress] = useState('')
-  const [isConnected, setIsConnected] = useState(false)
+  const { address: connectedAddress, isConnected } = useAccount()
   const [balance, setBalance] = useState(null)
   const [chatHistory, setChatHistory] = useState([])
   const [activity, setActivity] = useState([])
@@ -14,13 +14,24 @@ export default function App() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Register wallet on connect
+  useEffect(() => {
+    if (isConnected && connectedAddress) {
+      axios.post(`${API_BASE}/api/users/register`, {
+        wallet_address: connectedAddress
+      }).catch(error => {
+        console.error('Error registering wallet:', error)
+      })
+    }
+  }, [isConnected, connectedAddress])
+
   // Fetch balance every 30 seconds
   useEffect(() => {
-    if (!isConnected || !walletAddress) return
+    if (!isConnected || !connectedAddress) return
 
     const fetchBalance = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/balance/${walletAddress}`)
+        const response = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
         setBalance(response.data)
       } catch (error) {
         console.error('Error fetching balance:', error)
@@ -30,21 +41,28 @@ export default function App() {
     fetchBalance()
     const interval = setInterval(fetchBalance, 30000)
     return () => clearInterval(interval)
-  }, [isConnected, walletAddress])
+  }, [isConnected, connectedAddress])
 
   // Fetch activity every 10 seconds
   useEffect(() => {
-    if (!isConnected || !walletAddress) return
+    if (!isConnected || !connectedAddress) return
 
     const fetchActivity = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/activity/${walletAddress}`)
+        const response = await axios.get(`${API_BASE}/api/activity/${connectedAddress}`)
         setActivity(response.data.transactions || [])
       } catch (error) {
         console.error('Error fetching activity:', error)
       }
     }
 
+    fetchActivity()
+    const interval = setInterval(fetchActivity, 10000)
+    return () => clearInterval(interval)
+  }, [isConnected, connectedAddress])
+
+  // Fetch yields on mount
+  useEffect(() => {
     const fetchYields = async () => {
       try {
         const response = await axios.get(`${API_BASE}/api/yields`)
@@ -54,14 +72,8 @@ export default function App() {
       }
     }
 
-    fetchActivity()
     fetchYields()
-    const interval = setInterval(() => {
-      fetchActivity()
-      fetchYields()
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [isConnected, walletAddress])
+  }, [])
 
   // Initialize chat with Butler greeting
   useEffect(() => {
@@ -75,7 +87,7 @@ export default function App() {
   }, [isConnected])
 
   const sendMessage = async () => {
-    if (!message.trim() || loading) return
+    if (!message.trim() || loading || !connectedAddress) return
 
     const userMessage = message.trim()
     setMessage('')
@@ -90,14 +102,16 @@ export default function App() {
 
     try {
       const response = await axios.post(`${API_BASE}/api/chat`, {
-        wallet_address: walletAddress,
+        wallet_address: connectedAddress,
         message: userMessage
       })
+
+      const reply = response.data.reply
 
       // Add Butler response to chat
       setChatHistory(prev => [...prev, {
         type: 'butler',
-        message: response.data.reply || 'I understand your request. Let me process that for you.',
+        message: reply || 'I understand your request. Let me process that for you.',
         time: new Date().toISOString()
       }])
     } catch (error) {
@@ -174,7 +188,7 @@ export default function App() {
             <h2 className="text-lg font-semibold mb-2">Wallet</h2>
             <div className="bg-[#12121a] p-4 rounded-xl">
               <p className="text-gray-400 text-sm">Connected Address</p>
-              <p className="font-mono text-[#7c3aed]">{formatAddress(walletAddress)}</p>
+              <p className="font-mono text-[#7c3aed]">{formatAddress(connectedAddress)}</p>
             </div>
           </div>
 
@@ -249,7 +263,7 @@ export default function App() {
               />
               <button
                 onClick={sendMessage}
-                disabled={loading || !message.trim()}
+                disabled={loading || !message.trim() || !connectedAddress}
                 className="bg-[#7c3aed] text-white px-6 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#6d28d9] transition-colors"
               >
                 {loading ? '...' : 'Send'}
