@@ -14,6 +14,21 @@
         "send_schedule": "friday",
         "risk_level": "conservative"
       }
+    },
+    {
+      "user_id": "user_002",
+      "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608",
+      "usdc_balance": 0,
+      "aave_deposit": 0,
+      "buffer": 0,
+      "payment_reserve": 0,
+      "yield_earned": 0,
+      "rules": {
+        "send_amount": 0,
+        "send_to": "",
+        "send_schedule": "weekly",
+        "risk_level": "moderate"
+      }
     }
   ]
 }

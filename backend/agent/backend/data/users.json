@@ -4,10 +4,10 @@
       "user_id": "user_001",
       "wallet_address": "0xTEST123",
       "usdc_balance": 20.0,
-      "aave_deposit": 15.0,
+      "aave_deposit": 13.0,
       "buffer": 2.0,
       "payment_reserve": 5.0,
-      "yield_earned": 0.5,
+      "yield_earned": 0.6397710000000008,
       "rules": {
         "send_amount": 5.0,
         "send_to": "0xABC123",
