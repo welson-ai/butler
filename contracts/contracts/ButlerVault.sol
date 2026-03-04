@@ -1,106 +1,269 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract ButlerVault is Ownable, ReentrancyGuard {
-    IERC20 public usdcToken;
-    
-    struct PaymentPlan {
-        uint256 amount;
+interface IAavePool {
+    function supply(
+        address asset,
+        uint256 amount,
+        address onBehalfOf,
+        uint16 referralCode
+    ) external;
+
+    function withdraw(
+        address asset,
+        uint256 amount,
+        address to
+    ) external returns (uint256);
+}
+
+contract ButlerVault is ReentrancyGuard {
+
+    // ─────────────────────────────────────────
+    // State Variables
+    // ─────────────────────────────────────────
+
+    IERC20 public immutable usdc;
+    IAavePool public immutable aavePool;
+    address public butlerAgent;
+    address public owner;
+
+    // Each user's deposited balance
+    mapping(address => uint256) public deposits;
+
+    // Each user's Aave deposit
+    mapping(address => uint256) public aaveDeposits;
+
+    // Each user's payment reserve
+    mapping(address => uint256) public paymentReserves;
+
+    // Whether user has active butler
+    mapping(address => bool) public butlerActive;
+
+    // Payment rules per user
+    struct PaymentRule {
         address recipient;
-        uint256 lastPayment;
-        uint256 frequency; // 1 = daily, 7 = weekly, 30 = monthly
+        uint256 amount;
+        string schedule;
         bool active;
     }
-    
-    mapping(address => PaymentPlan) public paymentPlans;
-    address[] public users;
-    
-    event PaymentMade(address indexed user, address indexed recipient, uint256 amount);
-    event PlanUpdated(address indexed user, uint256 amount, address recipient, uint256 frequency);
+    mapping(address => PaymentRule) public paymentRules;
+
+    // ─────────────────────────────────────────
+    // Events
+    // ─────────────────────────────────────────
+
     event Deposited(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
-    
-    constructor(address _usdcToken) {
-        usdcToken = IERC20(_usdcToken);
+    event DeployedToAave(address indexed user, uint256 amount);
+    event WithdrawnFromAave(address indexed user, uint256 amount);
+    event PaymentSent(address indexed from, address indexed to, uint256 amount);
+    event ButlerActivated(address indexed user);
+    event ButlerRevoked(address indexed user);
+    event RuleSet(address indexed user, address recipient, uint256 amount, string schedule);
+
+    // ─────────────────────────────────────────
+    // Modifiers
+    // ─────────────────────────────────────────
+
+    modifier onlyButler() {
+        require(msg.sender == butlerAgent, "Only butler agent can call this");
+        _;
     }
-    
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
+    modifier butlerEnabled(address user) {
+        require(butlerActive[user], "Butler not active for this user");
+        _;
+    }
+
+    // ─────────────────────────────────────────
+    // Constructor
+    // ─────────────────────────────────────────
+
+    constructor(
+        address _usdc,
+        address _aavePool,
+        address _butlerAgent
+    ) {
+        usdc = IERC20(_usdc);
+        aavePool = IAavePool(_aavePool);
+        butlerAgent = _butlerAgent;
+        owner = msg.sender;
+    }
+
+    // ─────────────────────────────────────────
+    // User Functions
+    // ─────────────────────────────────────────
+
+    // User deposits USDC once and activates butler
     function deposit(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be greater than 0");
-        require(usdcToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        require(amount > 0, "Amount must be greater than zero");
+
+        usdc.transferFrom(msg.sender, address(this), amount);
+        deposits[msg.sender] += amount;
+        butlerActive[msg.sender] = true;
+
         emit Deposited(msg.sender, amount);
+        emit ButlerActivated(msg.sender);
     }
-    
-    function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be greater than 0");
-        require(usdcToken.balanceOf(address(this)) >= amount, "Insufficient vault balance");
-        
-        uint256 userBalance = getUserBalance(msg.sender);
-        require(userBalance >= amount, "Insufficient user balance");
-        
-        require(usdcToken.transfer(msg.sender, amount), "Transfer failed");
-        emit Withdrawn(msg.sender, amount);
-    }
-    
-    function setPaymentPlan(
-        uint256 amount,
+
+    // User sets payment rules
+    function setPaymentRule(
         address recipient,
-        uint256 frequency
+        uint256 amount,
+        string calldata schedule
     ) external {
-        require(amount > 0, "Amount must be greater than 0");
+        require(butlerActive[msg.sender], "Deposit first to activate butler");
         require(recipient != address(0), "Invalid recipient");
-        require(frequency > 0, "Invalid frequency");
-        
-        if (paymentPlans[msg.sender].amount == 0) {
-            users.push(msg.sender);
-        }
-        
-        paymentPlans[msg.sender] = PaymentPlan({
-            amount: amount,
+        require(amount > 0, "Amount must be greater than zero");
+
+        paymentRules[msg.sender] = PaymentRule({
             recipient: recipient,
-            lastPayment: block.timestamp,
-            frequency: frequency,
+            amount: amount,
+            schedule: schedule,
             active: true
         });
-        
-        emit PlanUpdated(msg.sender, amount, recipient, frequency);
+
+        // Reserve payment amount from deposit
+        require(deposits[msg.sender] >= amount, "Insufficient balance for reserve");
+        paymentReserves[msg.sender] = amount;
+
+        emit RuleSet(msg.sender, recipient, amount, schedule);
     }
-    
-    function executePayment(address user) external nonReentrant {
-        PaymentPlan storage plan = paymentPlans[user];
-        require(plan.active, "No active payment plan");
-        
-        uint256 timeSinceLastPayment = block.timestamp - plan.lastPayment;
-        require(timeSinceLastPayment >= plan.frequency * 1 days, "Payment not due yet");
-        
-        uint256 userBalance = getUserBalance(user);
-        require(userBalance >= plan.amount, "Insufficient balance for payment");
-        
-        require(usdcToken.transfer(plan.recipient, plan.amount), "Transfer failed");
-        
-        plan.lastPayment = block.timestamp;
-        emit PaymentMade(user, plan.recipient, plan.amount);
+
+    // User can always withdraw everything directly
+    function emergencyWithdraw() external nonReentrant {
+        uint256 vaultBalance = deposits[msg.sender];
+        uint256 aaveBalance = aaveDeposits[msg.sender];
+
+        require(vaultBalance > 0 || aaveBalance > 0, "Nothing to withdraw");
+
+        // Withdraw from Aave first if deployed
+        if (aaveBalance > 0) {
+            usdc.approve(address(aavePool), aaveBalance);
+            aavePool.withdraw(address(usdc), aaveBalance, address(this));
+            aaveDeposits[msg.sender] = 0;
+        }
+
+        // Return everything
+        uint256 totalBalance = usdc.balanceOf(address(this));
+        uint256 userShare = vaultBalance + aaveBalance;
+
+        deposits[msg.sender] = 0;
+        paymentReserves[msg.sender] = 0;
+        butlerActive[msg.sender] = false;
+
+        usdc.transfer(msg.sender, userShare);
+
+        emit Withdrawn(msg.sender, userShare);
+        emit ButlerRevoked(msg.sender);
     }
-    
-    function getUserBalance(address user) public view returns (uint256) {
-        // This would typically track per-user deposits
-        // For simplicity, we'll use the total vault balance divided by number of users
-        if (users.length == 0) return 0;
-        return usdcToken.balanceOf(address(this)) / users.length;
+
+    // User revokes butler without withdrawing
+    function revokeButler() external {
+        butlerActive[msg.sender] = false;
+        emit ButlerRevoked(msg.sender);
     }
-    
-    function getPaymentPlan(address user) external view returns (PaymentPlan memory) {
-        return paymentPlans[user];
+
+    // ─────────────────────────────────────────
+    // Butler Agent Functions
+    // Only the AI agent can call these
+    // ─────────────────────────────────────────
+
+    // Deploy user funds to Aave
+    function deployToAave(
+        address user,
+        uint256 amount
+    ) external onlyButler butlerEnabled(user) nonReentrant {
+        require(deposits[user] >= amount, "Insufficient vault balance");
+        require(amount > 0, "Amount must be greater than zero");
+
+        deposits[user] -= amount;
+        aaveDeposits[user] += amount;
+
+        usdc.approve(address(aavePool), amount);
+        aavePool.supply(address(usdc), amount, address(this), 0);
+
+        emit DeployedToAave(user, amount);
     }
-    
-    function getAllUsers() external view returns (address[] memory) {
-        return users;
+
+    // Withdraw user funds from Aave
+    function withdrawFromAave(
+        address user,
+        uint256 amount
+    ) external onlyButler butlerEnabled(user) nonReentrant {
+        require(aaveDeposits[user] >= amount, "Insufficient Aave balance");
+
+        aaveDeposits[user] -= amount;
+        deposits[user] += amount;
+
+        aavePool.withdraw(address(usdc), amount, address(this));
+
+        emit WithdrawnFromAave(user, amount);
     }
-    
-    function getVaultBalance() external view returns (uint256) {
-        return usdcToken.balanceOf(address(this));
+
+    // Send scheduled payment on behalf of user
+    function executePayment(
+        address user
+    ) external onlyButler butlerEnabled(user) nonReentrant {
+        PaymentRule memory rule = paymentRules[user];
+        require(rule.active, "No active payment rule");
+        require(rule.amount > 0, "Invalid payment amount");
+        require(deposits[user] >= rule.amount, "Insufficient balance for payment");
+
+        deposits[user] -= rule.amount;
+        usdc.transfer(rule.recipient, rule.amount);
+
+        // Refill payment reserve from Aave if needed
+        if (deposits[user] < rule.amount && aaveDeposits[user] >= rule.amount) {
+            aaveDeposits[user] -= rule.amount;
+            deposits[user] += rule.amount;
+            aavePool.withdraw(address(usdc), rule.amount, address(this));
+        }
+
+        emit PaymentSent(user, rule.recipient, rule.amount);
+    }
+
+    // ─────────────────────────────────────────
+    // View Functions
+    // ─────────────────────────────────────────
+
+    function getUserBalance(address user) external view returns (
+        uint256 vaultBalance,
+        uint256 aaveBalance,
+        uint256 paymentReserve,
+        bool isActive
+    ) {
+        return (
+            deposits[user],
+            aaveDeposits[user],
+            paymentReserves[user],
+            butlerActive[user]
+        );
+    }
+
+    function getPaymentRule(address user) external view returns (
+        address recipient,
+        uint256 amount,
+        string memory schedule,
+        bool active
+    ) {
+        PaymentRule memory rule = paymentRules[user];
+        return (rule.recipient, rule.amount, rule.schedule, rule.active);
+    }
+
+    // ─────────────────────────────────────────
+    // Owner Functions
+    // ─────────────────────────────────────────
+
+    function updateButlerAgent(address newAgent) external onlyOwner {
+        butlerAgent = newAgent;
     }
 }
