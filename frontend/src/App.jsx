@@ -1,9 +1,35 @@
 import React, { useState, useEffect } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { parseUnits } from 'viem'
 import axios from 'axios'
 
 const API_BASE = 'http://localhost:5001'
+const VAULT_ADDRESS = import.meta.env.VITE_BUTLER_VAULT_ADDRESS
+const USDC_ADDRESS = import.meta.env.VITE_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+
+const VAULT_ABI = [
+  {
+    name: 'deposit',
+    type: 'function',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable'
+  }
+]
+
+const ERC20_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable'
+  }
+]
 
 export default function App() {
   const { address: connectedAddress, isConnected } = useAccount()
@@ -13,6 +39,9 @@ export default function App() {
   const [yields, setYields] = useState({})
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [messages, setMessages] = useState([])
 
   // Register wallet on connect
   useEffect(() => {
@@ -86,6 +115,52 @@ export default function App() {
     }
   }, [isConnected])
 
+  const { writeContractAsync } = useWriteContract()
+
+  const activateButler = async (plan) => {
+    try {
+      setIsLoading(true)
+      const amount = parseUnits(plan.usdc_total.toString(), 6)
+
+      // Step 1 — approve vault to spend USDC
+      await writeContractAsync({
+        address: USDC_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [VAULT_ADDRESS, amount]
+      })
+
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: 'USDC approved ✅ Now depositing into vault...'
+      }])
+
+      // Step 2 — deposit into vault
+      await writeContractAsync({
+        address: VAULT_ADDRESS,
+        abi: VAULT_ABI,
+        functionName: 'deposit',
+        args: [amount]
+      })
+
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: '🎉 Your funds are in the vault. Your Butler is now fully active and autonomous. You can close this app — I will keep working.'
+      }])
+
+      setCurrentPlan(null)
+      fetchBalance()
+    } catch (error) {
+      console.error('Activation error:', error)
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: 'Something went wrong with the deposit. Please try again.'
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const sendMessage = async () => {
     if (!message.trim() || loading || !connectedAddress) return
 
@@ -107,6 +182,12 @@ export default function App() {
       })
 
       const reply = response.data.reply
+      const plan = response.data.plan
+
+      // Set current plan if available
+      if (plan && plan.status === 'active') {
+        setCurrentPlan(plan)
+      }
 
       // Add Butler response to chat
       setChatHistory(prev => [...prev, {
@@ -248,6 +329,47 @@ export default function App() {
                 </div>
               </div>
             ))}
+            
+            {/* Butler Activation Card */}
+            {currentPlan && (
+              <div style={{
+                background: 'linear-gradient(135deg, #1a1a2e, #12122a)',
+                padding: '20px',
+                borderRadius: '16px',
+                border: '1px solid #7c3aed',
+                marginTop: '12px'
+              }}>
+                <div style={{color: '#a78bfa', fontWeight: 'bold', marginBottom: '12px'}}>
+                  ⚡ Butler Activation
+                </div>
+                <div style={{color: '#e5e7eb', fontSize: '14px', marginBottom: '16px'}}>
+                  <div>💰 Deposit into vault: <strong>{currentPlan.usdc_total} USDC</strong></div>
+                  <div>📈 Deploy to Aave: <strong>{currentPlan.aave_deposit} USDC</strong></div>
+                  <div>💸 Payment reserve: <strong>{currentPlan.payment_reserve} USDC</strong></div>
+                  <div>🛡️ Safety buffer: <strong>{currentPlan.buffer} USDC</strong></div>
+                </div>
+                <button
+                  onClick={() => activateButler(currentPlan)}
+                  disabled={isLoading}
+                  style={{
+                    background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    color: 'white',
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold',
+                    width: '100%',
+                    fontSize: '16px'
+                  }}
+                >
+                  {isLoading ? '⏳ Processing...' : '✅ Activate Butler — Deposit Now'}
+                </button>
+                <div style={{color: '#6b7280', fontSize: '11px', marginTop: '8px', textAlign: 'center'}}>
+                  Two MetaMask popups — approve then deposit. One time only.
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-gray-800">
