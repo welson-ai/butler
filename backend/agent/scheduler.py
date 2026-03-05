@@ -207,32 +207,57 @@ class ButlerScheduler:
         return self.activity_log[-limit:] if self.activity_log else []
     
     def start(self):
-        """
-        Start the scheduler with daily cycle job
-        """
-        # Add daily cycle job
-        self.scheduler.add_job(
-            func=self.run_daily_cycle,
-            trigger="interval",
-            seconds=TEST_CLOCK_INTERVAL,
-            id="daily_cycle"
-        )
+        all_users = self.user_store.get_all_users()
         
-        self.log_activity("Butler is awake. Managing wallets.", "info")
-        
+        for user in all_users:
+            interval = user.get('rules', {}).get('interval_seconds', TEST_CLOCK_INTERVAL)
+            duration = user.get('rules', {}).get('duration_seconds', -1)
+            wallet = user.get('wallet_address')
+            
+            self.scheduler.add_job(
+                func=self.run_user_cycle,
+                trigger='interval',
+                seconds=interval,
+                args=[wallet, duration],
+                id=f'cycle_{wallet}'
+            )
+            self.log_activity(f"Butler active for {wallet} — payment every {interval}s", 'info')
+
         try:
             self.scheduler.start()
-            print("⏰ Scheduler started. Running daily cycles every 3 minutes.")
-            print("Press Ctrl+C to stop.")
-            
-            # Keep main thread alive
+            print('⏰ Scheduler running — each user on their own timer')
             while True:
                 import time
                 time.sleep(1)
-                
         except KeyboardInterrupt:
-            print("\n⏹ Butler going to sleep.")
+            print('Butler going to sleep')
             self.scheduler.shutdown()
+
+    def run_user_cycle(self, wallet_address, duration_seconds):
+        user = self.user_store.get_user(wallet_address)
+        if not user:
+            return
+
+        rules = user.get('rules', {})
+        self.current_day += 1
+
+        # Check if duration has expired
+        if duration_seconds > 0:
+            elapsed = self.current_day * rules.get('interval_seconds', 180)
+            if elapsed > duration_seconds:
+                self.log_activity(f"Duration complete for {wallet_address}. Stopping.", 'info')
+                self.scheduler.remove_job(f'cycle_{wallet_address}')
+                return
+
+        # Yield if requested
+        if rules.get('yield_requested', False):
+            best_protocol, best_apy = self.yield_engine.get_best_yield(rules.get('risk_level', 'moderate'))
+            daily_yield = self.yield_engine.calculate_daily_yield(user.get('aave_deposit', 0), best_apy)
+            self.user_store.update_balance(wallet_address, user.get('aave_deposit', 0), daily_yield)
+            self.log_activity(f"Yield: +{daily_yield:.6f} USDC from {best_protocol}", 'yield')
+
+        # Always process payment
+        self.process_payment(user)
 
 # Test at bottom
 if __name__ == "__main__":

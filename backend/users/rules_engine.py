@@ -18,30 +18,20 @@ class RulesEngine:
     def build_plan(self, parsed_instruction: dict, wallet_address: str) -> dict:
         """
         Build operational plan from parsed instruction
-        
-        Args:
-            parsed_instruction: JSON output from brain.py
-            wallet_address: User's wallet address
-            
-        Returns:
-            Operational plan dictionary with calculated buckets
-        """
         try:
             usdc_total = float(parsed_instruction.get('usdc_total', 0))
             send_amount = float(parsed_instruction.get('send_amount', 0))
-            buffer_amount = float(parsed_instruction.get('buffer_amount', 0))
-            
-            # If buffer is zero default to 10% of total
-            if buffer_amount == 0:
+            yield_requested = parsed_instruction.get('yield_requested', False)
+            interval_seconds = int(parsed_instruction.get('interval_seconds', 86400))
+            duration_seconds = int(parsed_instruction.get('duration_seconds', -1))
+
+            if yield_requested:
                 buffer_amount = round(usdc_total * 0.1, 2)
-            
-            aave_deposit = round(usdc_total - send_amount - buffer_amount, 2)
-            
-            # Safety check — aave deposit cannot be negative
-            if aave_deposit < 0:
+                aave_deposit = round(usdc_total - send_amount - buffer_amount, 2)
+            else:
+                buffer_amount = 0
                 aave_deposit = 0
-                buffer_amount = round(usdc_total - send_amount, 2)
-            
+
             plan = {
                 'wallet_address': wallet_address,
                 'usdc_total': usdc_total,
@@ -51,9 +41,11 @@ class RulesEngine:
                 'send_to_address': parsed_instruction.get('send_to_address', ''),
                 'send_to': parsed_instruction.get('send_to_address', ''),
                 'send_amount': send_amount,
-                'send_schedule': parsed_instruction.get('send_schedule', 'weekly'),
+                'interval_seconds': interval_seconds,
+                'duration_seconds': duration_seconds,
+                'yield_requested': yield_requested,
                 'risk_level': parsed_instruction.get('risk_level', 'moderate'),
-                'yield_strategy': parsed_instruction.get('yield_strategy', 'aave_lending'),
+                'yield_strategy': 'aave_lending' if yield_requested else 'none',
                 'created_at': datetime.now().isoformat(),
                 'status': 'active'
             }
@@ -80,20 +72,13 @@ class RulesEngine:
         
         return schedule_map.get(schedule.lower(), 7)  # Default to weekly
     
-    def validate_plan(self, plan: dict) -> bool:
-        """
-        Validate operational plan
-        
-        Args:
-            plan: Operational plan to validate
-            
-        Returns:
-            True if valid, raises ValueError if not
-        """
-        if plan.get('aave_deposit', 0) <= 0:
-            raise ValueError("Aave deposit must be greater than zero")
-        if not plan.get('send_to_address') and not plan.get('send_to'):
+    def validate_plan(self, plan):
+        if not plan.get('send_to_address'):
             raise ValueError("Recipient address is required")
+        if plan.get('send_amount', 0) <= 0:
+            raise ValueError("Send amount must be greater than zero")
+        if plan.get('usdc_total', 0) <= 0:
+            raise ValueError("USDC total must be greater than zero")
         return True
 
 # Test at bottom

@@ -33,17 +33,36 @@ class ButlerBrain:
     def parse_instruction(self, user_message, wallet_address):
         try:
             system = """You are a crypto butler assistant.
-Extract financial instructions from user messages and return ONLY a valid JSON object.
-No markdown. No backticks. No explanation. Just raw JSON.
-Always return these exact fields:
+You ONLY manage exactly what user gives you — never more.
+Read instructions precisely and literally.
+
+Rules:
+- usdc_total = ONLY amount user explicitly gives you to manage
+- If user says "take 3 USDC" then usdc_total = 3 NOT their total wallet balance
+- If user says "don't touch the rest" then only manage what they gave you
+- If user does not mention yield or growing money then yield_requested = false
+- Extract payment interval in seconds from natural language:
+  "every 10 seconds" = 10
+  "every minute" = 60
+  "every friday" = 604800
+  "every day" = 86400
+  "every month" = 2592000
+- Extract total duration if mentioned:
+  "for 30 seconds" = 30
+  "for 1 week" = 604800
+  "forever" = -1
+
+Return ONLY this exact JSON — no markdown no backticks:
 {
-    "usdc_total": <float>,
+    "usdc_total": <float — ONLY what user gave you>,
     "send_amount": <float>,
     "send_to_address": "<string>",
-    "send_schedule": "<friday|monday|daily|first_of_month>",
+    "interval_seconds": <int — payment frequency in seconds>,
+    "duration_seconds": <int — total run time, -1 if forever>,
     "risk_level": "<conservative|moderate|aggressive>",
-    "yield_strategy": "aave_lending",
-    "buffer_amount": <float — always 10 percent of usdc_total>
+    "yield_requested": <boolean — only true if user explicitly asked to grow money>,
+    "yield_strategy": "<aave_lending|none>",
+    "buffer_amount": <float — 10 percent of usdc_total, or 0 if no yield requested>
 }"""
             result = self._call_claude(system, user_message)
             print(f"DEBUG raw claude response: {repr(result)}")
