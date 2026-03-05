@@ -18,6 +18,14 @@ class RulesEngine:
     def build_plan(self, parsed_instruction: dict, wallet_address: str) -> dict:
         """
         Build operational plan from parsed instruction
+        
+        Args:
+            parsed_instruction: Dictionary with parsed user instruction
+            wallet_address: User wallet address
+            
+        Returns:
+            Dictionary with operational plan
+        """
         try:
             usdc_total = float(parsed_instruction.get('usdc_total', 0))
             send_amount = float(parsed_instruction.get('send_amount', 0))
