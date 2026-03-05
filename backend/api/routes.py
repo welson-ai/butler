@@ -209,6 +209,49 @@ def send_now():
         print(f"Send error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@api.route('/api/deploy-yield', methods=['POST'])
+def deploy_yield():
+    try:
+        data = request.get_json()
+        wallet_address = data.get('wallet_address')
+        amount = float(data.get('amount', 0))
+
+        from protocols.vault import ButlerVault
+        from protocols.mock_yields import MockYieldEngine
+
+        vault = ButlerVault()
+        yields = MockYieldEngine()
+
+        balance = vault.get_user_balance(wallet_address)
+        print(f"DEBUG balance before deploy: {balance}")
+
+        if balance['vault_balance'] < amount:
+            return jsonify({
+                'success': False,
+                'error': f"Only {balance['vault_balance']} USDC in vault"
+            })
+
+        tx_hash = vault.deploy_to_aave(wallet_address, amount)
+
+        best_protocol, best_apy = yields.get_best_yield('moderate')
+        daily_yield = yields.calculate_daily_yield(amount, best_apy)
+
+        return jsonify({
+            'success': True,
+            'tx_hash': tx_hash,
+            'amount_deployed': amount,
+            'protocol': best_protocol,
+            'apy': best_apy,
+            'daily_yield': daily_yield,
+            'monthly_estimate': round(daily_yield * 30, 6),
+            'yearly_estimate': round(amount * best_apy / 100, 4),
+            'basescan': f'https://sepolia.basescan.org/tx/{tx_hash}'
+        })
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @api.route('/api/status', methods=['GET'])
 def get_status():
     """
