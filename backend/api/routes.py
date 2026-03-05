@@ -252,6 +252,72 @@ def deploy_yield():
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@api.route('/api/yield-status/<wallet_address>', methods=['GET'])
+def yield_status(wallet_address):
+    try:
+        from protocols.vault import ButlerVault
+        from protocols.mock_yields import MockYieldEngine
+        from users.user_store import UserStore
+        import datetime
+
+        vault = ButlerVault()
+        yields = MockYieldEngine()
+        store = UserStore()
+
+        balance = vault.get_user_balance(wallet_address)
+        user = store.get_user(wallet_address)
+        best_protocol, best_apy = yields.get_best_yield('moderate')
+
+        aave_balance = balance['aave_balance']
+        vault_balance = balance['vault_balance']
+
+        # Calculate time running
+        created_at = user.get('created_at') if user else None
+        if created_at:
+            start_time = datetime.datetime.fromisoformat(created_at)
+            now = datetime.datetime.now()
+            elapsed = now - start_time
+            hours_running = round(elapsed.total_seconds() / 3600, 2)
+            days_running = round(elapsed.total_seconds() / 86400, 4)
+        else:
+            hours_running = 0
+            days_running = 0
+
+        # Calculate yield earned so far
+        yield_earned = user.get('yield_earned', 0) if user else 0
+
+        # Calculate projections
+        daily_rate = best_apy / 100 / 365
+        daily_yield = round(aave_balance * daily_rate, 6)
+        weekly_yield = round(daily_yield * 7, 4)
+        monthly_yield = round(daily_yield * 30, 4)
+        yearly_yield = round(aave_balance * best_apy / 100, 4)
+
+        # Per second rate
+        per_second = round(aave_balance * daily_rate / 86400, 10)
+
+        return jsonify({
+            'wallet': wallet_address,
+            'status': 'active' if aave_balance > 0 else 'not_deployed',
+            'protocol': best_protocol,
+            'apy': best_apy,
+            'capital_deployed': aave_balance,
+            'vault_idle': vault_balance,
+            'yield_earned_total': yield_earned,
+            'hours_running': hours_running,
+            'days_running': days_running,
+            'per_second': per_second,
+            'daily_yield': daily_yield,
+            'weekly_yield': weekly_yield,
+            'monthly_yield': monthly_yield,
+            'yearly_yield': yearly_yield,
+            'last_updated': datetime.datetime.now().isoformat()
+        })
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/api/status', methods=['GET'])
 def get_status():
     """

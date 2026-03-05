@@ -50,6 +50,8 @@ export default function App() {
     yearly_estimate: 0
   })
   const [liveYield, setLiveYield] = useState(0)
+  const [yieldStatus, setYieldStatus] = useState(null)
+  const [sessionYield, setSessionYield] = useState(0)
 
   // Register wallet on connect
   useEffect(() => {
@@ -146,6 +148,29 @@ export default function App() {
     }, 1000)
     return () => clearInterval(interval)
   }, [yieldData.apy, balance])
+
+  // Fetch yield status every 10 seconds
+  useEffect(() => {
+    if (!connectedAddress) return
+    const fetch = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5001/api/yield-status/${connectedAddress}`)
+        setYieldStatus(res.data)
+      } catch(e) {}
+    }
+    fetch()
+    const interval = setInterval(fetch, 10000)
+    return () => clearInterval(interval)
+  }, [connectedAddress])
+
+  // Tick session yield every second
+  useEffect(() => {
+    if (!yieldStatus?.per_second) return
+    const interval = setInterval(() => {
+      setSessionYield(prev => prev + yieldStatus.per_second)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [yieldStatus?.per_second])
 
   // Initialize chat with Butler greeting
   useEffect(() => {
@@ -345,58 +370,97 @@ export default function App() {
                 <p className="text-xl font-semibold text-yellow-400">${balance.yield_earned?.toFixed(2) || '0.00'}</p>
               </div>
 
-              {/* Yield Display Section */}
-              <div style={{
-                background: '#052e16',
-                border: '1px solid #22c55e',
-                borderRadius: '12px',
-                padding: '16px',
-                marginTop: '12px'
-              }}>
-                <div style={{color: '#22c55e', fontWeight: 'bold', marginBottom: '8px'}}>
-                  📈 Active Yield
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                  <span style={{color: '#9ca3af'}}>Protocol</span>
-                  <span style={{color: 'white', textTransform: 'capitalize'}}>{yieldData.protocol}</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
-                  <span style={{color: '#9ca3af'}}>APY</span>
-                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldData.apy}%</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
-                  <span style={{color: '#9ca3af'}}>Daily Earn</span>
-                  <span style={{color: '#22c55e'}}>+{yieldData.daily_yield} USDC</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
-                  <span style={{color: '#9ca3af'}}>Monthly Est.</span>
-                  <span style={{color: '#22c55e'}}>+{yieldData.monthly_estimate} USDC</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
-                  <span style={{color: '#9ca3af'}}>Yearly Est.</span>
-                  <span style={{color: '#22c55e'}}>+{yieldData.yearly_estimate} USDC</span>
-                </div>
-              </div>
+              {/* Yield Dashboard */}
+              {yieldStatus && (
+                <div style={{marginTop: '16px'}}>
 
-              {/* Live Yield Counter */}
-              <div style={{
-                background: '#0a0a1a',
-                border: '1px solid #7c3aed',
-                borderRadius: '12px',
-                padding: '16px',
-                marginTop: '12px',
-                textAlign: 'center'
-              }}>
-                <div style={{color: '#6b7280', fontSize: '12px', marginBottom: '4px'}}>
-                  YIELD EARNED THIS SESSION
+                  {/* Status Bar */}
+                  <div style={{
+                    background: yieldStatus.status === 'active' ? '#052e16' : '#1a1a2e',
+                    border: `1px solid ${yieldStatus.status === 'active' ? '#22c55e' : '#4b5563'}`,
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <div style={{color: '#22c55e', fontWeight: 'bold'}}>
+                      {yieldStatus.status === 'active' ? '🟢 Earning Now' : '⚪ Not Deployed'}
+                    </div>
+                    <div style={{color: '#9ca3af', fontSize: '12px'}}>
+                      {yieldStatus.hours_running}h running
+                    </div>
+                  </div>
+
+                  {/* Live Ticker */}
+                  <div style={{
+                    background: '#0a0a1a',
+                    border: '1px solid #7c3aed',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    textAlign: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '4px'}}>
+                      YIELD EARNED THIS SESSION
+                    </div>
+                    <div style={{color: '#22c55e', fontSize: '28px', fontWeight: 'bold', fontFamily: 'monospace'}}>
+                      +{sessionYield.toFixed(8)} USDC
+                    </div>
+                    <div style={{color: '#6b7280', fontSize: '10px', marginTop: '4px'}}>
+                      +{yieldStatus.per_second.toFixed(10)} USDC per second
+                    </div>
+                  </div>
+
+                  {/* Protocol Info */}
+                  <div style={{
+                    background: '#12121a',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    marginBottom: '10px'
+                  }}>
+                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>DEPLOYED TO</div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{color: '#9ca3af'}}>Protocol</span>
+                      <span style={{color: 'white', textTransform: 'capitalize', fontWeight: 'bold'}}>{yieldStatus.protocol}</span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{color: '#9ca3af'}}>APY</span>
+                      <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldStatus.apy}%</span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                      <span style={{color: '#9ca3af'}}>Capital</span>
+                      <span style={{color: 'white'}}>{yieldStatus.capital_deployed} USDC</span>
+                    </div>
+                  </div>
+
+                  {/* Projections */}
+                  <div style={{
+                    background: '#12121a',
+                    borderRadius: '12px',
+                    padding: '14px'
+                  }}>
+                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>YIELD PROJECTIONS</div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{color: '#9ca3af'}}>Today</span>
+                      <span style={{color: '#22c55e'}}>+{yieldStatus.daily_yield} USDC</span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{color: '#9ca3af'}}>This Week</span>
+                      <span style={{color: '#22c55e'}}>+{yieldStatus.weekly_yield} USDC</span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{color: '#9ca3af'}}>This Month</span>
+                      <span style={{color: '#22c55e'}}>+{yieldStatus.monthly_yield} USDC</span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                      <span style={{color: '#9ca3af'}}>This Year</span>
+                      <span style={{color: '#22c55e', fontWeight: 'bold'}}>+{yieldStatus.yearly_yield} USDC</span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{color: '#22c55e', fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace'}}>
-                  +{liveYield.toFixed(8)} USDC
-                </div>
-                <div style={{color: '#6b7280', fontSize: '11px', marginTop: '4px'}}>
-                  Ticking every second ↑
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
