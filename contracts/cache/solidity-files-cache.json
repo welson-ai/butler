@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/h/CascadeProjects/windsurf-project/crypto-butler/contracts/contracts/ButlerVault.sol": {
-      "lastModificationDate": 1772626561004,
-      "contentHash": "7da7965174d55ed494bb1ab743922983",
+      "lastModificationDate": 1772711735569,
+      "contentHash": "1cdebe0932dc5ddb3e3f28da8a493e46",
       "sourceName": "contracts/ButlerVault.sol",
       "solcConfig": {
         "version": "0.8.20",

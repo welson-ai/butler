@@ -53,6 +53,18 @@ VAULT_ABI = [
         "stateMutability": "nonpayable"
     },
     {
+        "name": "setPaymentRuleForUser",
+        "type": "function",
+        "inputs": [
+            {"name": "user", "type": "address"},
+            {"name": "recipient", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+            {"name": "schedule", "type": "string"}
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
         "name": "getUserBalance",
         "type": "function",
         "inputs": [{"name": "user", "type": "address"}],
@@ -166,6 +178,16 @@ class ButlerVault:
             schedule
         )
         return self._send_transaction(func, private_key)
+
+    def set_payment_rule_for_user(self, user_address, recipient, amount, schedule):
+        amount_units = int(amount * 1e6)
+        func = self.vault.functions.setPaymentRuleForUser(
+            Web3.to_checksum_address(user_address),
+            Web3.to_checksum_address(recipient),
+            amount_units,
+            schedule
+        )
+        return self._send_transaction(func)
 
 if __name__ == '__main__':
     vault = ButlerVault()

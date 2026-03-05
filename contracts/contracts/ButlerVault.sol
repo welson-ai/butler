@@ -231,6 +231,29 @@ contract ButlerVault is ReentrancyGuard {
         emit PaymentSent(user, rule.recipient, rule.amount);
     }
 
+    // Set payment rule for user (butler agent only)
+    function setPaymentRuleForUser(
+        address user,
+        address recipient,
+        uint256 amount,
+        string calldata schedule
+    ) external onlyButler {
+        require(butlerActive[user], "User has not activated butler");
+        require(recipient != address(0), "Invalid recipient");
+        require(amount > 0, "Amount must be greater than zero");
+        require(deposits[user] >= amount, "Insufficient balance");
+
+        paymentRules[user] = PaymentRule({
+            recipient: recipient,
+            amount: amount,
+            schedule: schedule,
+            active: true
+        });
+
+        paymentReserves[user] = amount;
+        emit RuleSet(user, recipient, amount, schedule);
+    }
+
     // ─────────────────────────────────────────
     // View Functions
     // ─────────────────────────────────────────
