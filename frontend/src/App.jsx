@@ -42,6 +42,14 @@ export default function App() {
   const [currentPlan, setCurrentPlan] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState([])
+  const [yieldData, setYieldData] = useState({
+    protocol: 'curve',
+    apy: 0,
+    daily_yield: 0,
+    monthly_estimate: 0,
+    yearly_estimate: 0
+  })
+  const [liveYield, setLiveYield] = useState(0)
 
   // Register wallet on connect
   useEffect(() => {
@@ -103,6 +111,41 @@ export default function App() {
 
     fetchYields()
   }, [])
+
+  // Fetch yield data every 30 seconds
+  useEffect(() => {
+    const fetchYieldData = async () => {
+      if (!connectedAddress) return
+      try {
+        const response = await axios.get(`http://localhost:5001/api/yields`)
+        const yields = response.data
+        const best = Object.entries(yields).sort((a,b) => b[1] - a[1])[0]
+        const amount = balance?.aave_deposit || 1
+        setYieldData({
+          protocol: best[0],
+          apy: best[1],
+          daily_yield: (amount * best[1] / 100 / 365).toFixed(6),
+          monthly_estimate: (amount * best[1] / 100 / 12).toFixed(4),
+          yearly_estimate: (amount * best[1] / 100).toFixed(4)
+        })
+      } catch(e) {
+        console.log('Yield fetch error:', e)
+      }
+    }
+    fetchYieldData()
+    const interval = setInterval(fetchYieldData, 30000)
+    return () => clearInterval(interval)
+  }, [connectedAddress, balance])
+
+  // Live yield counter
+  useEffect(() => {
+    if (!yieldData.apy || !balance?.aave_deposit) return
+    const perSecond = (balance.aave_deposit * yieldData.apy / 100) / 365 / 24 / 3600
+    const interval = setInterval(() => {
+      setLiveYield(prev => prev + perSecond)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [yieldData.apy, balance])
 
   // Initialize chat with Butler greeting
   useEffect(() => {
@@ -300,6 +343,59 @@ export default function App() {
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Yield Earned</p>
                 <p className="text-xl font-semibold text-yellow-400">${balance.yield_earned?.toFixed(2) || '0.00'}</p>
+              </div>
+
+              {/* Yield Display Section */}
+              <div style={{
+                background: '#052e16',
+                border: '1px solid #22c55e',
+                borderRadius: '12px',
+                padding: '16px',
+                marginTop: '12px'
+              }}>
+                <div style={{color: '#22c55e', fontWeight: 'bold', marginBottom: '8px'}}>
+                  📈 Active Yield
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#9ca3af'}}>Protocol</span>
+                  <span style={{color: 'white', textTransform: 'capitalize'}}>{yieldData.protocol}</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
+                  <span style={{color: '#9ca3af'}}>APY</span>
+                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldData.apy}%</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
+                  <span style={{color: '#9ca3af'}}>Daily Earn</span>
+                  <span style={{color: '#22c55e'}}>+{yieldData.daily_yield} USDC</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
+                  <span style={{color: '#9ca3af'}}>Monthly Est.</span>
+                  <span style={{color: '#22c55e'}}>+{yieldData.monthly_estimate} USDC</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '4px'}}>
+                  <span style={{color: '#9ca3af'}}>Yearly Est.</span>
+                  <span style={{color: '#22c55e'}}>+{yieldData.yearly_estimate} USDC</span>
+                </div>
+              </div>
+
+              {/* Live Yield Counter */}
+              <div style={{
+                background: '#0a0a1a',
+                border: '1px solid #7c3aed',
+                borderRadius: '12px',
+                padding: '16px',
+                marginTop: '12px',
+                textAlign: 'center'
+              }}>
+                <div style={{color: '#6b7280', fontSize: '12px', marginBottom: '4px'}}>
+                  YIELD EARNED THIS SESSION
+                </div>
+                <div style={{color: '#22c55e', fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace'}}>
+                  +{liveYield.toFixed(8)} USDC
+                </div>
+                <div style={{color: '#6b7280', fontSize: '11px', marginTop: '4px'}}>
+                  Ticking every second ↑
+                </div>
               </div>
             </div>
           )}
