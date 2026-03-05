@@ -173,6 +173,42 @@ def register_user():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@api.route('/api/send', methods=['POST'])
+def send_now():
+    try:
+        data = request.get_json()
+        from_address = data.get('wallet_address')
+        to_address = data.get('to_address')
+        amount = float(data.get('amount', 0))
+
+        if not from_address or not to_address or amount <= 0:
+            return jsonify({'error': 'Missing required fields: wallet_address, to_address, amount'}), 400
+
+        from protocols.vault import ButlerVault
+        vault = ButlerVault()
+
+        balance = vault.get_user_balance(from_address)
+        print(f"Vault balance: {balance}")
+
+        if balance['vault_balance'] < amount:
+            return jsonify({
+                'success': False,
+                'error': f"Vault balance is {balance['vault_balance']} USDC. Need {amount} USDC.",
+                'vault_balance': balance['vault_balance']
+            })
+
+        tx_hash = vault.execute_payment(from_address)
+        return jsonify({
+            'success': True,
+            'tx_hash': tx_hash,
+            'amount': amount,
+            'to': to_address,
+            'basescan': f'https://sepolia.basescan.org/tx/{tx_hash}'
+        })
+    except Exception as e:
+        print(f"Send error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @api.route('/api/status', methods=['GET'])
 def get_status():
     """
