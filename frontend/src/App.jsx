@@ -82,7 +82,7 @@ export default function App() {
     return () => clearInterval(interval)
   }, [isConnected, connectedAddress])
 
-  // Fetch activity every 10 seconds
+  // Fetch activity every 3 seconds for live updates
   useEffect(() => {
     if (!isConnected || !connectedAddress) return
 
@@ -96,7 +96,7 @@ export default function App() {
     }
 
     fetchActivity()
-    const interval = setInterval(fetchActivity, 10000)
+    const interval = setInterval(fetchActivity, 3000) // 3 seconds for live updates
     return () => clearInterval(interval)
   }, [isConnected, connectedAddress])
 
@@ -274,21 +274,25 @@ export default function App() {
     }
   }
 
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'deposit': return 'text-green-400'
-      case 'payment': return 'text-blue-400'
-      case 'withdrawal': return 'text-red-400'
-      default: return 'text-gray-400'
-    }
-  }
-
-  const getActivityEmoji = (type) => {
-    switch (type) {
+  const getActivityEmoji = (txType) => {
+    switch (txType) {
       case 'deposit': return '📈'
       case 'payment': return '💸'
       case 'withdrawal': return '📉'
-      default: return 'ℹ️'
+      case 'yield': return '🌱'
+      case 'activation': return '🤵'
+      default: return '📄'
+    }
+  }
+
+  const getActivityColor = (txType) => {
+    switch (txType) {
+      case 'deposit': return 'text-green-400'
+      case 'payment': return 'text-blue-400'
+      case 'withdrawal': return 'text-yellow-400'
+      case 'yield': return 'text-emerald-400'
+      case 'activation': return 'text-purple-400'
+      default: return 'text-gray-400'
     }
   }
 
@@ -568,10 +572,12 @@ export default function App() {
                     <span className="text-lg">{getActivityEmoji(item.tx_type)}</span>
                     <div className="flex-1">
                       <p className={`text-sm ${getActivityColor(item.tx_type)}`}>
-                        {item.tx_type === 'deposit' && `Deposited $${item.amount} to Aave`}
-                        {item.tx_type === 'payment' && `Sent $${item.amount} to ${formatAddress(item.to_address)}`}
-                        {item.tx_type === 'withdrawal' && `Withdrew $${item.amount} from Aave`}
-                        {item.tx_type !== 'deposit' && item.tx_type !== 'payment' && item.tx_type !== 'withdrawal' && `${item.tx_type}: $${item.amount}`}
+                        {item.tx_type === 'deposit' && `📈 Deposited $${item.amount} to Aave`}
+                        {item.tx_type === 'payment' && `💸 Sent $${item.amount} to ${formatAddress(item.to_address)}`}
+                        {item.tx_type === 'withdrawal' && `📉 Withdrew $${item.amount} from Aave`}
+                        {item.tx_type === 'yield' && `🌱 Earned $${item.amount} in yield`}
+                        {item.tx_type === 'activation' && `🤵 Butler activated with $${item.amount}`}
+                        {item.tx_type !== 'deposit' && item.tx_type !== 'payment' && item.tx_type !== 'withdrawal' && item.tx_type !== 'yield' && item.tx_type !== 'activation' && `${item.tx_type}: $${item.amount}`}
                       </p>
                       <p className="text-xs text-gray-500">{formatTime(item.timestamp)}</p>
                     </div>

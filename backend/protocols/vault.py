@@ -154,7 +154,19 @@ class ButlerVault:
             Web3.to_checksum_address(user_address),
             amount_units
         )
-        return self._send_transaction(func)
+        tx_hash = self._send_transaction(func)
+        
+        # Log transaction to activity feed
+        from users.user_store import UserStore
+        store = UserStore()
+        store.log_transaction(
+            wallet_address=user_address,
+            tx_type='deposit',
+            amount=amount,
+            tx_hash=tx_hash
+        )
+        
+        return tx_hash
 
     def withdraw_from_aave(self, user_address, amount):
         amount_units = int(amount * 1e6)
@@ -168,7 +180,23 @@ class ButlerVault:
         func = self.vault.functions.executePayment(
             Web3.to_checksum_address(user_address)
         )
-        return self._send_transaction(func)
+        tx_hash = self._send_transaction(func)
+        
+        # Log transaction to activity feed
+        from users.user_store import UserStore
+        store = UserStore()
+        user = store.get_user(user_address)
+        recipient = user.get('send_to_address', 'Unknown') if user else 'Unknown'
+        
+        store.log_transaction(
+            wallet_address=user_address,
+            tx_type='payment',
+            amount=user.get('payment_reserve', 0) if user else 0,
+            tx_hash=tx_hash,
+            to_address=recipient
+        )
+        
+        return tx_hash
 
     def set_payment_rule(self, user_address, recipient, amount, schedule, private_key):
         amount_units = int(amount * 1e6)

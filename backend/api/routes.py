@@ -80,6 +80,14 @@ def chat():
                     plan['yield_tx'] = tx_hash
                     plan['protocol'] = best_protocol
                     plan['apy'] = best_apy
+                    
+                    # Log the auto-deployment to activity feed
+                    user_store.log_transaction(
+                        wallet_address=wallet_address,
+                        tx_type='deposit',
+                        amount=deploy_amount,
+                        tx_hash=tx_hash
+                    )
                 else:
                     print(f"Vault balance {balance['vault_balance']} insufficient for {deploy_amount} USDC deploy")
             except Exception as e:
