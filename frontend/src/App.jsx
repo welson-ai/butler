@@ -523,13 +523,13 @@ export default function App() {
               marginBottom: '12px'
             }}>
               <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '4px'}}>
-                YIELD EARNED THIS SESSION
+                PROJECTED YIELD (since activation)
               </div>
               <div style={{color: '#22c55e', fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace'}}>
                 +{sessionYield.toFixed(8)} USDC
               </div>
               <div style={{color: '#6b7280', fontSize: '10px', marginTop: '4px'}}>
-                Ticking every second ↑
+                Based on {yieldStatus?.apy}% APY — updates on compound
               </div>
             </div>
 

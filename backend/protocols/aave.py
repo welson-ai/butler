@@ -25,6 +25,16 @@ AAVE_POOL_ABI = [
     {"name": "withdraw", "type": "function", "inputs": [{"name": "asset", "type": "address"}, {"name": "amount", "type": "uint256"}, {"name": "to", "type": "address"}], "outputs": [{"name": "", "type": "uint256"}], "stateMutability": "nonpayable"}
 ]
 
+AUSDC_ABI = [
+    {
+        "name": "balanceOf",
+        "type": "function",
+        "inputs": [{"name": "account", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view"
+    }
+]
+
 class AaveProtocol:
     def __init__(self):
         """
@@ -235,6 +245,21 @@ class AaveProtocol:
         except Exception as e:
             print(f"Error sending USDC: {e}")
             return ""
+    
+    def get_atoken_balance(self, wallet_address):
+        try:
+            ausdc_address = os.getenv('AUSDC_SEPOLIA_ADDRESS', '0x96C8394a3D1B80b07A4a614C2B2A5e8BF6b9DEF')
+            ausdc = self.web3.eth.contract(
+                address=Web3.to_checksum_address(ausdc_address),
+                abi=AUSDC_ABI
+            )
+            balance = ausdc.functions.balanceOf(
+                Web3.to_checksum_address(wallet_address)
+            ).call()
+            return round(balance / 1e6, 6)
+        except Exception as e:
+            print(f"aToken balance error: {e}")
+            return 0
 
 # Test at bottom
 if __name__ == "__main__":
