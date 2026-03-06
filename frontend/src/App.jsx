@@ -184,36 +184,40 @@ export default function App() {
   }, [isConnected])
 
   const { writeContractAsync } = useWriteContract()
+const { writeContractAsync: emergencyWrite } = useWriteContract()
+const [isWithdrawing, setIsWithdrawing] = useState(false)
 
   const activateButler = async (plan) => {
     try {
       setIsLoading(true)
-      const amount = parseUnits(plan.usdc_total.toString(), 6)
 
-      // Step 1 — approve vault to spend USDC
-      await writeContractAsync({
-        address: USDC_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [VAULT_ADDRESS, amount]
-      })
+      if (!plan.already_funded) {
+        const amount = parseUnits(plan.usdc_total.toString(), 6)
+
+        // Approve USDC
+        await writeContractAsync({
+          address: USDC_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [VAULT_ADDRESS, amount]
+        })
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: 'USDC approved ✅ Now depositing into vault...'
+        }])
+
+        // Deposit into vault
+        await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'deposit',
+          args: [amount]
+        })
+      }
 
       setMessages(prev => [...prev, {
         role: 'butler',
-        content: 'USDC approved ✅ Now depositing into vault...'
-      }])
-
-      // Step 2 — deposit into vault
-      await writeContractAsync({
-        address: VAULT_ADDRESS,
-        abi: VAULT_ABI,
-        functionName: 'deposit',
-        args: [amount]
-      })
-
-      setMessages(prev => [...prev, {
-        role: 'butler',
-        content: '🎉 Your funds are in the vault. Your Butler is now fully active and autonomous. You can close this app — I will keep working.'
+        content: '🎉 Butler fully activated. Your money is working. You can close this app — I will keep going.'
       }])
 
       setCurrentPlan(null)
@@ -222,57 +226,98 @@ export default function App() {
       console.error('Activation error:', error)
       setMessages(prev => [...prev, {
         role: 'butler',
-        content: 'Something went wrong with the deposit. Please try again.'
+        content: 'Deposit failed. Please try again.'
       }])
     } finally {
       setIsLoading(false)
     }
   }
 
+  const emergencyWithdraw = async () => {
+    if (!confirm('Withdraw all funds from vault back to your wallet?')) return
+    try {
+      setIsWithdrawing(true)
+      await emergencyWrite({
+        address: VAULT_ADDRESS,
+        abi: [{
+          name: 'emergencyWithdraw',
+          type: 'function',
+          inputs: [],
+          outputs: [],
+          stateMutability: 'nonpayable'
+        }],
+        functionName: 'emergencyWithdraw'
+      })
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: '✅ Emergency withdrawal complete. All funds returned to your wallet.'
+      }])
+      fetchBalance()
+    } catch(e) {
+      console.error('Withdraw error:', e)
+    } finally {
+      setIsWithdrawing(false)
+    }
+  }
+
   const sendMessage = async () => {
-    if (!message.trim() || loading || !connectedAddress) return
+    if (!message.trim() || !connectedAddress) return
 
     const userMessage = message.trim()
     setMessage('')
     setLoading(true)
 
-    // Add user message to chat
+    // First check vault balance
+    const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
+    const vaultBalance = balanceRes.data?.vault_balance || 0
+
+    const response = await axios.post(`${API_BASE}/api/chat`, {
+      wallet_address: connectedAddress,
+      message: userMessage
+    })
+
+    const plan = response.data.plan
+    const reply = response.data.reply
+
     setChatHistory(prev => [...prev, {
-      type: 'user',
-      message: userMessage,
+      type: 'butler',
+      message: reply || 'I understand your request. Let me process that for you.',
       time: new Date().toISOString()
     }])
 
-    try {
-      const response = await axios.post(`${API_BASE}/api/chat`, {
-        wallet_address: connectedAddress,
-        message: userMessage
-      })
-
-      const reply = response.data.reply
-      const plan = response.data.plan
-
-      // Set current plan if available
-      if (plan && plan.status === 'active') {
+    if (plan) {
+      // Check if vault already has enough
+      if (vaultBalance >= plan.usdc_total) {
+        setChatHistory(prev => [...prev, {
+          type: 'butler',
+          message: `✅ I can see ${vaultBalance} USDC already in your vault. Activating your plan now without a new deposit.`,
+          time: new Date().toISOString()
+        }])
+        setCurrentPlan({ ...plan, already_funded: true })
+      } else if (vaultBalance > 0 && vaultBalance < plan.usdc_total) {
+        setChatHistory(prev => [...prev, {
+          type: 'butler',
+          message: `I can see ${vaultBalance} USDC already in your vault. You need ${plan.usdc_total} USDC total — please deposit ${(plan.usdc_total - vaultBalance).toFixed(2)} more USDC.`,
+          time: new Date().toISOString()
+        }])
+        setCurrentPlan(plan)
+      } else {
         setCurrentPlan(plan)
       }
-
-      // Add Butler response to chat
-      setChatHistory(prev => [...prev, {
-        type: 'butler',
-        message: reply || 'I understand your request. Let me process that for you.',
-        time: new Date().toISOString()
-      }])
-    } catch (error) {
-      setChatHistory(prev => [...prev, {
-        type: 'butler',
-        message: 'Sorry, I encountered an error processing your request. Please try again.',
-        time: new Date().toISOString()
-      }])
-    } finally {
-      setLoading(false)
     }
+
+    fetchBalance()
+  } catch (error) {
+    console.error('Chat error:', error)
+    setChatHistory(prev => [...prev, {
+      type: 'butler',
+      message: 'Sorry something went wrong. Please try again.',
+      time: new Date().toISOString()
+    }])
+  } finally {
+    setLoading(false)
   }
+}
 
   const getActivityEmoji = (txType) => {
     switch (txType) {
@@ -378,6 +423,31 @@ export default function App() {
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Buffer</p>
                 <p className="text-xl font-semibold text-yellow-400">${balance.buffer?.toFixed(2) || '0.00'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Emergency Withdraw Button */}
+          {isConnected && (
+            <div style={{marginTop: '16px'}}>
+              <button
+                onClick={emergencyWithdraw}
+                disabled={isWithdrawing}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  width: '100%',
+                  fontSize: '13px'
+                }}
+              >
+                {isWithdrawing ? '⏳ Withdrawing...' : '🚨 Emergency Withdraw All'}
+              </button>
+              <div style={{color: '#4b5563', fontSize: '10px', textAlign: 'center', marginTop: '4px'}}>
+                Returns all funds to your wallet instantly
               </div>
             </div>
           )}
