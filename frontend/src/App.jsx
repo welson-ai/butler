@@ -335,23 +335,34 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-80px)]">
-        {/* Left Panel - Wallet & Balance */}
-        <div className="w-1/3 border-r border-gray-800 p-6">
+        {/* Left Panel - Wallet & Balances */}
+        <div className="w-1/3 border-r border-gray-800 p-6 flex flex-col">
+          <h2 className="text-lg font-semibold mb-4">Wallet & Balances</h2>
+          
+          {/* Connect Button */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Wallet</h2>
-            <div className="bg-[#12121a] p-4 rounded-xl">
-              <p className="text-gray-400 text-sm">Connected Address</p>
-              <p className="font-mono text-[#7c3aed]">{formatAddress(connectedAddress)}</p>
-            </div>
+            <ConnectButton />
           </div>
 
+          {/* Wallet Address */}
+          {connectedAddress && (
+            <div className="bg-[#12121a] p-4 rounded-xl mb-4">
+              <p className="text-gray-400 text-sm mb-1">Connected Wallet</p>
+              <p className="text-sm font-mono text-white">{formatAddress(connectedAddress)}</p>
+            </div>
+          )}
+
+          {/* Balances */}
           {balance && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Balance</h2>
-              
+            <div className="space-y-3">
               <div className="bg-[#12121a] p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">USDC Balance</p>
+                <p className="text-gray-400 text-sm">USDC Wallet Balance</p>
                 <p className="text-2xl font-bold">${balance.usdc_balance?.toFixed(2) || '0.00'}</p>
+              </div>
+
+              <div className="bg-[#12121a] p-4 rounded-xl">
+                <p className="text-gray-400 text-sm">Vault Balance</p>
+                <p className="text-xl font-semibold text-blue-400">${balance.vault_balance?.toFixed(2) || '0.00'}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
@@ -361,110 +372,54 @@ export default function App() {
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Payment Reserve</p>
-                <p className="text-xl font-semibold text-blue-400">${balance.payment_reserve?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-purple-400">${balance.payment_reserve?.toFixed(2) || '0.00'}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Buffer</p>
-                <p className="text-xl font-semibold text-purple-400">${balance.buffer?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-yellow-400">${balance.buffer?.toFixed(2) || '0.00'}</p>
               </div>
+            </div>
+          )}
 
-              <div className="bg-[#12121a] p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Yield Earned</p>
-                <p className="text-xl font-semibold text-yellow-400">${balance.yield_earned?.toFixed(2) || '0.00'}</p>
+          {/* Butler Activation Card */}
+          {currentPlan && (
+            <div style={{
+              background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+              border: '1px solid #22d3ee',
+              borderRadius: '16px',
+              padding: '20px',
+              marginTop: '20px'
+            }}>
+              <div style={{color: '#a78bfa', fontWeight: 'bold', marginBottom: '12px'}}>
+                ⚡ Butler Activation
               </div>
-
-              {/* Yield Dashboard */}
-              {yieldStatus && (
-                <div style={{marginTop: '16px'}}>
-
-                  {/* Status Bar */}
-                  <div style={{
-                    background: yieldStatus.status === 'active' ? '#052e16' : '#1a1a2e',
-                    border: `1px solid ${yieldStatus.status === 'active' ? '#22c55e' : '#4b5563'}`,
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{color: '#22c55e', fontWeight: 'bold'}}>
-                      {yieldStatus.status === 'active' ? '🟢 Earning Now' : '⚪ Not Deployed'}
-                    </div>
-                    <div style={{color: '#9ca3af', fontSize: '12px'}}>
-                      {yieldStatus.hours_running}h running
-                    </div>
-                  </div>
-
-                  {/* Live Ticker */}
-                  <div style={{
-                    background: '#0a0a1a',
-                    border: '1px solid #7c3aed',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    textAlign: 'center',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '4px'}}>
-                      YIELD EARNED THIS SESSION
-                    </div>
-                    <div style={{color: '#22c55e', fontSize: '28px', fontWeight: 'bold', fontFamily: 'monospace'}}>
-                      +{sessionYield.toFixed(8)} USDC
-                    </div>
-                    <div style={{color: '#6b7280', fontSize: '10px', marginTop: '4px'}}>
-                      +{yieldStatus.per_second.toFixed(10)} USDC per second
-                    </div>
-                  </div>
-
-                  {/* Protocol Info */}
-                  <div style={{
-                    background: '#12121a',
-                    borderRadius: '12px',
-                    padding: '14px',
-                    marginBottom: '10px'
-                  }}>
-                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>DEPLOYED TO</div>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{color: '#9ca3af'}}>Protocol</span>
-                      <span style={{color: 'white', textTransform: 'capitalize', fontWeight: 'bold'}}>{yieldStatus.protocol}</span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{color: '#9ca3af'}}>APY</span>
-                      <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldStatus.apy}%</span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                      <span style={{color: '#9ca3af'}}>Capital</span>
-                      <span style={{color: 'white'}}>{yieldStatus.capital_deployed} USDC</span>
-                    </div>
-                  </div>
-
-                  {/* Projections */}
-                  <div style={{
-                    background: '#12121a',
-                    borderRadius: '12px',
-                    padding: '14px'
-                  }}>
-                    <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>YIELD PROJECTIONS</div>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{color: '#9ca3af'}}>Today</span>
-                      <span style={{color: '#22c55e'}}>+{yieldStatus.daily_yield} USDC</span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{color: '#9ca3af'}}>This Week</span>
-                      <span style={{color: '#22c55e'}}>+{yieldStatus.weekly_yield} USDC</span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{color: '#9ca3af'}}>This Month</span>
-                      <span style={{color: '#22c55e'}}>+{yieldStatus.monthly_yield} USDC</span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                      <span style={{color: '#9ca3af'}}>This Year</span>
-                      <span style={{color: '#22c55e', fontWeight: 'bold'}}>+{yieldStatus.yearly_yield} USDC</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div style={{color: '#e5e7eb', fontSize: '14px', marginBottom: '16px'}}>
+                <div>💰 Deposit into vault: <strong>{currentPlan.usdc_total} USDC</strong></div>
+                <div>📈 Deploy to Aave: <strong>{currentPlan.aave_deposit} USDC</strong></div>
+                <div>💸 Payment reserve: <strong>{currentPlan.payment_reserve} USDC</strong></div>
+                <div>🛡️ Safety buffer: <strong>{currentPlan.buffer} USDC</strong></div>
+              </div>
+              <button
+                onClick={() => activateButler(currentPlan)}
+                disabled={isLoading}
+                style={{
+                  background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: 'white',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  width: '100%',
+                  fontSize: '16px'
+                }}
+              >
+                {isLoading ? '⏳ Processing...' : '✅ Activate Butler — Deposit Now'}
+              </button>
+              <div style={{color: '#6b7280', fontSize: '11px', marginTop: '8px', textAlign: 'center'}}>
+                Two MetaMask popups — approve then deposit. One time only.
+              </div>
             </div>
           )}
         </div>
@@ -494,48 +449,7 @@ export default function App() {
               </div>
             ))}
             
-            {/* Butler Activation Card */}
-            {currentPlan && (
-              <div style={{
-                background: 'linear-gradient(135deg, #1a1a2e, #12122a)',
-                padding: '20px',
-                borderRadius: '16px',
-                border: '1px solid #7c3aed',
-                marginTop: '12px'
-              }}>
-                <div style={{color: '#a78bfa', fontWeight: 'bold', marginBottom: '12px'}}>
-                  ⚡ Butler Activation
-                </div>
-                <div style={{color: '#e5e7eb', fontSize: '14px', marginBottom: '16px'}}>
-                  <div>💰 Deposit into vault: <strong>{currentPlan.usdc_total} USDC</strong></div>
-                  <div>📈 Deploy to Aave: <strong>{currentPlan.aave_deposit} USDC</strong></div>
-                  <div>💸 Payment reserve: <strong>{currentPlan.payment_reserve} USDC</strong></div>
-                  <div>🛡️ Safety buffer: <strong>{currentPlan.buffer} USDC</strong></div>
-                </div>
-                <button
-                  onClick={() => activateButler(currentPlan)}
-                  disabled={isLoading}
-                  style={{
-                    background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                    color: 'white',
-                    padding: '14px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: 'bold',
-                    width: '100%',
-                    fontSize: '16px'
-                  }}
-                >
-                  {isLoading ? '⏳ Processing...' : '✅ Activate Butler — Deposit Now'}
-                </button>
-                <div style={{color: '#6b7280', fontSize: '11px', marginTop: '8px', textAlign: 'center'}}>
-                  Two MetaMask popups — approve then deposit. One time only.
-                </div>
-              </div>
-            )}
-          </div>
-
+            {/* Message Input */}
           <div className="p-4 border-t border-gray-800">
             <div className="flex gap-2">
               <input
@@ -557,56 +471,132 @@ export default function App() {
             </div>
           </div>
         </div>
+        </div>
 
-        {/* Right Panel - Activity Feed */}
-        <div className="w-1/3 p-6 flex flex-col">
-          <h2 className="text-lg font-semibold mb-4">Live Activity</h2>
+        {/* Right Panel - Everything Live */}
+        <div className="w-1/3 p-6 flex flex-col overflow-y-auto">
           
-          <div className="flex-1 overflow-y-auto space-y-3 mb-6">
-            {activity.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No activity yet</p>
-            ) : (
-              activity.map((item, index) => (
-                <div key={index} className="bg-[#12121a] p-3 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg">{getActivityEmoji(item.tx_type)}</span>
-                    <div className="flex-1">
-                      <p className={`text-sm ${getActivityColor(item.tx_type)}`}>
-                        {item.tx_type === 'deposit' && `📈 Deposited $${item.amount} to Aave`}
-                        {item.tx_type === 'payment' && `💸 Sent $${item.amount} to ${formatAddress(item.to_address)}`}
-                        {item.tx_type === 'withdrawal' && `📉 Withdrew $${item.amount} from Aave`}
-                        {item.tx_type === 'yield' && `🌱 Earned $${item.amount} in yield`}
-                        {item.tx_type === 'activation' && `🤵 Butler activated with $${item.amount}`}
-                        {item.tx_type !== 'deposit' && item.tx_type !== 'payment' && item.tx_type !== 'withdrawal' && item.tx_type !== 'yield' && item.tx_type !== 'activation' && `${item.tx_type}: $${item.amount}`}
-                      </p>
-                      <p className="text-xs text-gray-500">{formatTime(item.timestamp)}</p>
+          {/* Live Activity */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4">Live Activity</h2>
+            
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {activity.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No activity yet</p>
+              ) : (
+                activity.map((item, index) => (
+                  <div key={index} className="bg-[#12121a] p-3 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg">{getActivityEmoji(item.tx_type)}</span>
+                      <div className="flex-1">
+                        <p className={`text-sm ${getActivityColor(item.tx_type)}`}>
+                          {item.tx_type === 'deposit' && `📈 Deployed $${item.amount} to ${item.protocol || 'Aave'}`}
+                          {item.tx_type === 'payment' && `💸 Sent $${item.amount} to ${formatAddress(item.to_address)}`}
+                          {item.tx_type === 'withdrawal' && `📉 Withdrew $${item.amount} from Aave`}
+                          {item.tx_type === 'yield' && `🌱 Earned $${item.amount} in yield`}
+                          {item.tx_type === 'activation' && `🤵 Butler activated with $${item.amount}`}
+                          {item.tx_type !== 'deposit' && item.tx_type !== 'payment' && item.tx_type !== 'withdrawal' && item.tx_type !== 'yield' && item.tx_type !== 'activation' && `${item.tx_type}: $${item.amount}`}
+                        </p>
+                        <p className="text-xs text-gray-500">{formatTime(item.timestamp)}</p>
+                      </div>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-800 pt-4 mb-4"></div>
+
+          {/* Active Yield */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4">Active Yield</h2>
+            
+            {/* Session Yield Ticker */}
+            <div style={{
+              background: '#0a0a1a',
+              border: '1px solid #7c3aed',
+              borderRadius: '12px',
+              padding: '16px',
+              textAlign: 'center',
+              marginBottom: '12px'
+            }}>
+              <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '4px'}}>
+                YIELD EARNED THIS SESSION
+              </div>
+              <div style={{color: '#22c55e', fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace'}}>
+                +{sessionYield.toFixed(8)} USDC
+              </div>
+              <div style={{color: '#6b7280', fontSize: '10px', marginTop: '4px'}}>
+                Ticking every second ↑
+              </div>
+            </div>
+
+            {/* Current Protocol Info */}
+            {yieldStatus && (
+              <div style={{
+                background: '#12121a',
+                borderRadius: '12px',
+                padding: '14px',
+                marginBottom: '12px'
+              }}>
+                <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>CURRENTLY DEPLOYED TO</div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                  <span style={{color: '#9ca3af'}}>Protocol</span>
+                  <span style={{color: 'white', textTransform: 'capitalize', fontWeight: 'bold'}}>{yieldStatus.protocol}</span>
                 </div>
-              ))
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                  <span style={{color: '#9ca3af'}}>APY</span>
+                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldStatus.apy}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* Yield Projections */}
+            {yieldStatus && (
+              <div style={{
+                background: '#12121a',
+                borderRadius: '12px',
+                padding: '14px'
+              }}>
+                <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>YIELD PROJECTIONS</div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                  <span style={{color: '#9ca3af'}}>Daily</span>
+                  <span style={{color: '#22c55e'}}>+{yieldStatus.daily_yield} USDC</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                  <span style={{color: '#9ca3af'}}>Weekly</span>
+                  <span style={{color: '#22c55e'}}>+{yieldStatus.weekly_yield} USDC</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                  <span style={{color: '#9ca3af'}}>Monthly</span>
+                  <span style={{color: '#22c55e'}}>+{yieldStatus.monthly_yield} USDC</span>
+                </div>
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#9ca3af'}}>Yearly</span>
+                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>+{yieldStatus.yearly_yield} USDC</span>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Current Yields */}
-          <div className="border-t border-gray-800 pt-4">
-            <h3 className="text-sm font-semibold mb-3 text-gray-400">Current Yields</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-[#12121a] p-2 rounded-lg">
-                <p className="text-xs text-gray-400">Aave</p>
-                <p className="text-sm font-semibold text-green-400">{yields.aave?.toFixed(2) || '0.00'}%</p>
-              </div>
-              <div className="bg-[#12121a] p-2 rounded-lg">
-                <p className="text-xs text-gray-400">Compound</p>
-                <p className="text-sm font-semibold text-green-400">{yields.compound?.toFixed(2) || '0.00'}%</p>
-              </div>
-              <div className="bg-[#12121a] p-2 rounded-lg">
-                <p className="text-xs text-gray-400">Curve</p>
-                <p className="text-sm font-semibold text-green-400">{yields.curve?.toFixed(2) || '0.00'}%</p>
-              </div>
-              <div className="bg-[#12121a] p-2 rounded-lg">
-                <p className="text-xs text-gray-400">Pendle</p>
-                <p className="text-sm font-semibold text-green-400">{yields.pendle?.toFixed(2) || '0.00'}%</p>
-              </div>
+          {/* Divider */}
+          <div className="border-t border-gray-800 pt-4 mb-4"></div>
+
+          {/* Market Yields */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Market Yields</h2>
+            
+            <div className="space-y-2">
+              {Object.entries(yields).map(([protocol, apy]) => (
+                <div key={protocol} className="bg-[#12121a] p-3 rounded-lg flex justify-between items-center">
+                  <span style={{color: '#9ca3af', textTransform: 'capitalize'}}>{protocol}</span>
+                  <span style={{color: parseFloat(apy) === Math.max(...Object.values(yields)) ? '#22c55e' : '#9ca3af', fontWeight: 'bold'}}>
+                    {parseFloat(apy).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
