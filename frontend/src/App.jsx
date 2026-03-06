@@ -283,7 +283,7 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
       type: 'butler',
       message: reply || 'I understand your request. Let me process that for you.',
       time: new Date().toISOString()
-    }])
+    }]);
 
     if (plan) {
       // Check if vault already has enough
@@ -292,14 +292,14 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           type: 'butler',
           message: `✅ I can see ${vaultBalance} USDC already in your vault. Activating your plan now without a new deposit.`,
           time: new Date().toISOString()
-        }])
+        }]);
         setCurrentPlan({ ...plan, already_funded: true })
       } else if (vaultBalance > 0 && vaultBalance < plan.usdc_total) {
         setChatHistory(prev => [...prev, {
           type: 'butler',
           message: `I can see ${vaultBalance} USDC already in your vault. You need ${plan.usdc_total} USDC total — please deposit ${(plan.usdc_total - vaultBalance).toFixed(2)} more USDC.`,
           time: new Date().toISOString()
-        }])
+        }]);
         setCurrentPlan(plan)
       } else {
         setCurrentPlan(plan)
@@ -308,14 +308,14 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
 
     fetchBalance();
   } catch (error) {
-    console.error('Chat error:', error)
+    console.error('Chat error:', error);
     setChatHistory(prev => [...prev, {
       type: 'butler',
       message: 'Sorry something went wrong. Please try again.',
       time: new Date().toISOString()
-    }])
+    }]);
   } finally {
-    setLoading(false)
+    setLoading(false);
   }
 }
 
