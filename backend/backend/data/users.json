@@ -18,14 +18,14 @@
     {
       "user_id": "user_002",
       "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608",
-      "usdc_balance": 1.0,
-      "aave_deposit": 0,
-      "buffer": 0,
+      "usdc_balance": 2.0,
+      "aave_deposit": 0.8,
+      "buffer": 0.2,
       "payment_reserve": 1.0,
       "yield_earned": 0,
       "rules": {
         "send_amount": 1.0,
-        "send_to": "0xDc9DE728E248d73dEfa3d4353c6b70195Fa025cf",
+        "send_to": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608",
         "send_schedule": "weekly",
         "risk_level": "conservative"
       }

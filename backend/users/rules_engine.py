@@ -81,12 +81,12 @@ class RulesEngine:
         return schedule_map.get(schedule.lower(), 7)  # Default to weekly
     
     def validate_plan(self, plan):
-        if not plan.get('send_to_address'):
-            raise ValueError("Recipient address is required")
-        if plan.get('send_amount', 0) <= 0:
-            raise ValueError("Send amount must be greater than zero")
         if plan.get('usdc_total', 0) <= 0:
             raise ValueError("USDC total must be greater than zero")
+        if plan.get('send_amount', 0) > 0 and not plan.get('send_to_address'):
+            raise ValueError("Recipient address required for payments")
+        if plan.get('yield_requested') and plan.get('aave_deposit', 0) <= 0:
+            raise ValueError("Yield amount must be greater than zero")
         return True
 
 # Test at bottom

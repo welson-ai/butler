@@ -61,8 +61,31 @@ def chat():
         
         is_valid = rules.validate_plan(plan)
         store.save_user(wallet_address, plan)
+
+        # If yield requested and capital available — deploy automatically
+        if plan.get('yield_requested', False) and plan.get('aave_deposit', 0) > 0:
+            try:
+                from protocols.vault import ButlerVault
+                from protocols.mock_yields import MockYieldEngine
+                vault = ButlerVault()
+                yields = MockYieldEngine()
+
+                balance = vault.get_user_balance(wallet_address)
+                deploy_amount = plan.get('aave_deposit', 0)
+
+                if balance['vault_balance'] >= deploy_amount:
+                    tx_hash = vault.deploy_to_aave(wallet_address, deploy_amount)
+                    best_protocol, best_apy = yields.get_best_yield(plan.get('risk_level', 'moderate'))
+                    print(f"📈 Auto deployed {deploy_amount} USDC to {best_protocol} at {best_apy}% — tx: {tx_hash}")
+                    plan['yield_tx'] = tx_hash
+                    plan['protocol'] = best_protocol
+                    plan['apy'] = best_apy
+                else:
+                    print(f"Vault balance {balance['vault_balance']} insufficient for {deploy_amount} USDC deploy")
+            except Exception as e:
+                print(f"Auto yield deploy error: {e}")
+
         reply = brain.generate_response(plan, wallet_address)
-        
         return jsonify({
             'reply': reply,
             'plan': plan,
