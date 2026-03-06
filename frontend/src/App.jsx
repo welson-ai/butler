@@ -306,7 +306,7 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
       }
     }
 
-    fetchBalance()
+    fetchBalance();
   } catch (error) {
     console.error('Chat error:', error)
     setChatHistory(prev => [...prev, {
