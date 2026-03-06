@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useWriteContract } from 'wagmi'
 import { parseUnits } from 'viem'
 import axios from 'axios'
 
 const API_BASE = 'http://localhost:5001'
 const VAULT_ADDRESS = import.meta.env.VITE_BUTLER_VAULT_ADDRESS
-const USDC_ADDRESS = import.meta.env.VITE_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 const VAULT_ABI = [
   {
     name: 'deposit',
     type: 'function',
     inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable'
+  },
+  {
+    name: 'emergencyWithdraw',
+    type: 'function',
+    inputs: [],
     outputs: [],
     stateMutability: 'nonpayable'
   }
@@ -33,147 +40,97 @@ const ERC20_ABI = [
 
 export default function App() {
   const { address: connectedAddress, isConnected } = useAccount()
-  const [balance, setBalance] = useState(null)
-  const [chatHistory, setChatHistory] = useState([])
-  const [activity, setActivity] = useState([])
-  const [yields, setYields] = useState({})
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { writeContractAsync } = useWriteContract()
+  
+  // State variables
+  const [messages, setMessages] = useState([])
+  const [inputMessage, setInputMessage] = useState('')
   const [currentPlan, setCurrentPlan] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [yieldData, setYieldData] = useState({
-    protocol: 'curve',
-    apy: 0,
-    daily_yield: 0,
-    monthly_estimate: 0,
-    yearly_estimate: 0
-  })
-  const [liveYield, setLiveYield] = useState(0)
+  const [vaultBalance, setVaultBalance] = useState(null)
+  const [yields, setYields] = useState({})
   const [yieldStatus, setYieldStatus] = useState(null)
   const [sessionYield, setSessionYield] = useState(0)
-  const [notifications, setNotifications] = useState([])
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [activity, setActivity] = useState([])
 
-  // Add notification function
-  const addNotification = (message, type = 'info') => {
-    const id = Date.now()
-    setNotifications(prev => [...prev, { id, message, type }])
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id))
-    }, 5000)
+  // Initialize chat with Butler greeting
+  useEffect(() => {
+    if (isConnected) {
+      setMessages([{
+        role: 'butler',
+        content: 'Hello! I am your Crypto Butler. Tell me how you would like to manage your USDC.',
+        time: new Date().toISOString()
+      }])
+    }
+  }, [isConnected])
+
+  // Fetch vault balance
+  const fetchBalance = async () => {
+    if (!connectedAddress) return
+    try {
+      const response = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
+      setVaultBalance(response.data)
+    } catch (error) {
+      console.error('Error fetching balance:', error)
+    }
   }
 
-  // Register wallet on connect
-  useEffect(() => {
-    if (isConnected && connectedAddress) {
-      axios.post(`${API_BASE}/api/users/register`, {
-        wallet_address: connectedAddress
-      }).catch(error => {
-        console.error('Error registering wallet:', error)
-      })
+  // Fetch activity feed
+  const fetchActivity = async () => {
+    if (!connectedAddress) return
+    try {
+      const response = await axios.get(`${API_BASE}/api/activity/${connectedAddress}`)
+      setActivity(response.data.transactions || [])
+    } catch (error) {
+      console.error('Error fetching activity:', error)
     }
-  }, [isConnected, connectedAddress])
+  }
 
-  // Fetch balance every 30 seconds
-  useEffect(() => {
-    if (!isConnected || !connectedAddress) return
-
-    const fetchBalance = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
-        setBalance(response.data)
-      } catch (error) {
-        console.error('Error fetching balance:', error)
-      }
+  // Fetch yields
+  const fetchYields = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/yields`)
+      setYields(response.data)
+    } catch (error) {
+      console.error('Error fetching yields:', error)
     }
+  }
+
+  // Fetch yield status
+  const fetchYieldStatus = async () => {
+    if (!connectedAddress) return
+    try {
+      const response = await axios.get(`${API_BASE}/api/yield-status/${connectedAddress}`)
+      setYieldStatus(response.data)
+    } catch (error) {
+      console.error('Error fetching yield status:', error)
+    }
+  }
+
+  // Set up intervals for data fetching
+  useEffect(() => {
+    if (!isConnected) return
 
     fetchBalance()
-    const interval = setInterval(fetchBalance, 30000)
-    return () => clearInterval(interval)
-  }, [isConnected, connectedAddress])
-
-  // Fetch activity every 3 seconds for live updates
-  useEffect(() => {
-    if (!isConnected || !connectedAddress) return
-
-    const fetchActivity = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/api/activity/${connectedAddress}`)
-        setActivity(response.data.transactions || [])
-      } catch (error) {
-        console.error('Error fetching activity:', error)
-      }
-    }
-
     fetchActivity()
-    const interval = setInterval(fetchActivity, 3000) // 3 seconds for live updates
-    return () => clearInterval(interval)
+    fetchYields()
+    fetchYieldStatus()
+
+    const balanceInterval = setInterval(fetchBalance, 30000)
+    const activityInterval = setInterval(fetchActivity, 5000)
+    const yieldsInterval = setInterval(fetchYields, 30000)
+    const yieldStatusInterval = setInterval(fetchYieldStatus, 10000)
+
+    return () => {
+      clearInterval(balanceInterval)
+      clearInterval(activityInterval)
+      clearInterval(yieldsInterval)
+      clearInterval(yieldStatusInterval)
+    }
   }, [isConnected, connectedAddress])
 
-  // Fetch yields on mount
-  useEffect(() => {
-    const fetchYields = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/api/yields`)
-        setYields(response.data)
-      } catch (error) {
-        console.error('Error fetching yields:', error)
-      }
-    }
-
-    fetchYields()
-  }, [])
-
-  // Fetch yield data every 30 seconds
-  useEffect(() => {
-    const fetchYieldData = async () => {
-      if (!connectedAddress) return
-      try {
-        const response = await axios.get(`http://localhost:5001/api/yields`)
-        const yields = response.data
-        const best = Object.entries(yields).sort((a,b) => b[1] - a[1])[0]
-        const amount = balance?.aave_deposit || 1
-        setYieldData({
-          protocol: best[0],
-          apy: best[1],
-          daily_yield: (amount * best[1] / 100 / 365).toFixed(6),
-          monthly_estimate: (amount * best[1] / 100 / 12).toFixed(4),
-          yearly_estimate: (amount * best[1] / 100).toFixed(4)
-        })
-      } catch(e) {
-        console.log('Yield fetch error:', e)
-      }
-    }
-    fetchYieldData()
-    const interval = setInterval(fetchYieldData, 30000)
-    return () => clearInterval(interval)
-  }, [connectedAddress, balance])
-
-  // Live yield counter
-  useEffect(() => {
-    if (!yieldData.apy || !balance?.aave_deposit) return
-    const perSecond = (balance.aave_deposit * yieldData.apy / 100) / 365 / 24 / 3600
-    const interval = setInterval(() => {
-      setLiveYield(prev => prev + perSecond)
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [yieldData.apy, balance])
-
-  // Fetch yield status every 10 seconds
-  useEffect(() => {
-    if (!connectedAddress) return
-    const fetch = async () => {
-      try {
-        const res = await axios.get(`http://localhost:5001/api/yield-status/${connectedAddress}`)
-        setYieldStatus(res.data)
-      } catch(e) {}
-    }
-    fetch()
-    const interval = setInterval(fetch, 10000)
-    return () => clearInterval(interval)
-  }, [connectedAddress])
-
-  // Tick session yield every second
+  // Session yield ticker
   useEffect(() => {
     if (!yieldStatus?.per_second) return
     const interval = setInterval(() => {
@@ -182,21 +139,66 @@ export default function App() {
     return () => clearInterval(interval)
   }, [yieldStatus?.per_second])
 
-  // Initialize chat with Butler greeting
-  useEffect(() => {
-    if (isConnected) {
-      setChatHistory([{
-        type: 'butler',
-        message: 'Hello! I am your Crypto Butler. Tell me how you would like to manage your USDC. For example: I have 20 USDC. Send 5 to wallet 0xABC every Friday and grow the rest safely.',
+  // Send message to Butler
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !connectedAddress) return
+
+    const userMessage = inputMessage.trim()
+    setInputMessage('')
+    
+    // Add user message
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: userMessage,
+      time: new Date().toISOString()
+    }])
+
+    try {
+      // Check vault balance first
+      const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
+      const vaultBalance = balanceRes.data?.vault_balance || 0
+
+      const response = await axios.post(`${API_BASE}/api/chat`, {
+        wallet_address: connectedAddress,
+        message: userMessage
+      })
+
+      const plan = response.data.plan
+      const reply = response.data.reply
+
+      // Add Butler response
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: reply || 'I understand your request. Let me process that for you.',
+        time: new Date().toISOString()
+      }])
+
+      if (plan) {
+        // Check if vault already has enough
+        if (vaultBalance >= plan.usdc_total) {
+          setMessages(prev => [...prev, {
+            role: 'butler',
+            content: `✅ I can see ${vaultBalance} USDC already in your vault. Activating your plan now without a new deposit.`,
+            time: new Date().toISOString()
+          }])
+          setCurrentPlan({ ...plan, already_funded: true })
+        } else {
+          setCurrentPlan(plan)
+        }
+      }
+
+      fetchBalance()
+    } catch (error) {
+      console.error('Chat error:', error)
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: 'Sorry something went wrong. Please try again.',
         time: new Date().toISOString()
       }])
     }
-  }, [isConnected])
+  }
 
-  const { writeContractAsync } = useWriteContract()
-const { writeContractAsync: emergencyWrite } = useWriteContract()
-const [isWithdrawing, setIsWithdrawing] = useState(false)
-
+  // Activate Butler
   const activateButler = async (plan) => {
     try {
       setIsLoading(true)
@@ -211,7 +213,6 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           functionName: 'approve',
           args: [VAULT_ADDRESS, amount]
         })
-        addNotification('USDC approved ✅ Now depositing into vault...', 'success')
 
         // Deposit into vault
         await writeContractAsync({
@@ -222,121 +223,30 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
         })
       }
 
-      addNotification('🎉 Butler fully activated. Your money is working. You can close this app — I will keep going.', 'success')
       setCurrentPlan(null)
       fetchBalance()
     } catch (error) {
       console.error('Activation error:', error)
-      addNotification('Deposit failed. Please try again.', 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Emergency withdraw
   const emergencyWithdraw = async () => {
-  if (!confirm('Withdraw all funds from vault back to your wallet?')) return
-  try {
-    setIsWithdrawing(true)
-    await emergencyWrite({
-      address: VAULT_ADDRESS,
-      abi: [{
-        name: 'emergencyWithdraw',
-        type: 'function',
-        inputs: [],
-        outputs: [],
-        stateMutability: 'nonpayable'
-      }],
-      functionName: 'emergencyWithdraw'
-    })
-    addNotification('✅ Emergency withdrawal complete. All funds returned to your wallet.', 'success')
-    fetchBalance()
-  } catch(e) {
-    console.error('Withdraw error:', e)
-    addNotification('Emergency withdrawal failed. Please try again.', 'error')
-  } finally {
-    setIsWithdrawing(false)
-  }
-}
-
-  const sendMessage = async () => {
-  if (!message.trim() || !connectedAddress) return;
-
-  const userMessage = message.trim();
-  setMessage('');
-  setLoading(true);
-
-  try {
-    // First check vault balance
-    const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`);
-    const vaultBalance = balanceRes.data?.vault_balance || 0;
-
-    const response = await axios.post(`${API_BASE}/api/chat`, {
-      wallet_address: connectedAddress,
-      message: userMessage
-    });
-
-    const plan = response.data.plan;
-    const reply = response.data.reply;
-
-    setChatHistory(prev => [...prev, {
-      type: 'butler',
-      message: reply || 'I understand your request. Let me process that for you.',
-      time: new Date().toISOString()
-    }]);
-
-    if (plan) {
-      // Check if vault already has enough
-      if (vaultBalance >= plan.usdc_total) {
-        setChatHistory(prev => [...prev, {
-          type: 'butler',
-          message: `✅ I can see ${vaultBalance} USDC already in your vault. Activating your plan now without a new deposit.`,
-          time: new Date().toISOString()
-        }]);
-        setCurrentPlan({ ...plan, already_funded: true });
-      } else if (vaultBalance > 0 && vaultBalance < plan.usdc_total) {
-        setChatHistory(prev => [...prev, {
-          type: 'butler',
-          message: `I can see ${vaultBalance} USDC already in your vault. You need ${plan.usdc_total} USDC total — please deposit ${(plan.usdc_total - vaultBalance).toFixed(2)} more USDC.`,
-          time: new Date().toISOString()
-        }]);
-        setCurrentPlan(plan);
-      } else {
-        setCurrentPlan(plan);
-      }
-    }
-
-    fetchBalance();
-  } catch (error) {
-    console.error('Chat error:', error);
-    setChatHistory(prev => [...prev, {
-      type: 'butler',
-      message: 'Sorry something went wrong. Please try again.',
-      time: new Date().toISOString()
-    }]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const getActivityEmoji = (txType) => {
-    switch (txType) {
-      case 'deposit': return '📈'
-      case 'payment': return '💸'
-      case 'withdrawal': return '📉'
-      case 'yield': return '🌱'
-      case 'activation': return '🤵'
-      default: return '📄'
-    }
-  }
-
-  const getActivityColor = (txType) => {
-    switch (txType) {
-      case 'deposit': return 'text-green-400'
-      case 'payment': return 'text-blue-400'
-      case 'withdrawal': return 'text-yellow-400'
-      case 'yield': return 'text-emerald-400'
-      case 'activation': return 'text-purple-400'
-      default: return 'text-gray-400'
+    if (!confirm('Withdraw all funds from vault back to your wallet?')) return
+    try {
+      setIsWithdrawing(true)
+      await writeContractAsync({
+        address: VAULT_ADDRESS,
+        abi: VAULT_ABI,
+        functionName: 'emergencyWithdraw'
+      })
+      fetchBalance()
+    } catch (error) {
+      console.error('Withdraw error:', error)
+    } finally {
+      setIsWithdrawing(false)
     }
   }
 
@@ -366,29 +276,15 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Header */}
-      <div className="bg-[#12121a] border-b border-gray-800 px-6 py-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">CRYPTO BUTLER</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm">Powered by x402 on Base</span>
-            <ConnectButton />
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Left Panel - Wallet & Balances */}
+      <div className="flex h-screen">
+        {/* LEFT PANEL */}
         <div className="w-1/3 border-r border-gray-800 p-6 flex flex-col">
-          <h2 className="text-lg font-semibold mb-4">Wallet & Balances</h2>
-          
-          {/* Connect Button */}
+          {/* RainbowKit ConnectButton */}
           <div className="mb-6">
             <ConnectButton />
           </div>
 
-          {/* Wallet Address */}
+          {/* Connected wallet address */}
           {connectedAddress && (
             <div className="bg-[#12121a] p-4 rounded-xl mb-4">
               <p className="text-gray-400 text-sm mb-1">Connected Wallet</p>
@@ -396,117 +292,107 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
             </div>
           )}
 
-          {/* Balances */}
-          {balance && (
-            <div className="space-y-3">
+          {/* Balance cards */}
+          {vaultBalance && (
+            <div className="space-y-3 flex-1">
               <div className="bg-[#12121a] p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">USDC Wallet Balance</p>
-                <p className="text-2xl font-bold">${balance.usdc_balance?.toFixed(2) || '0.00'}</p>
+                <p className="text-gray-400 text-sm">Wallet USDC</p>
+                <p className="text-2xl font-bold">${vaultBalance.usdc_balance?.toFixed(2) || '0.00'}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Vault Balance</p>
-                <p className="text-xl font-semibold text-blue-400">${balance.vault_balance?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-blue-400">${vaultBalance.vault_balance?.toFixed(2) || '0.00'}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Aave Deposit</p>
-                <p className="text-xl font-semibold text-green-400">${balance.aave_deposit?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-green-400">${vaultBalance.aave_deposit?.toFixed(2) || '0.00'}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Payment Reserve</p>
-                <p className="text-xl font-semibold text-purple-400">${balance.payment_reserve?.toFixed(2) || '0.00'}</p>
-              </div>
-
-              <div className="bg-[#12121a] p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Buffer</p>
-                <p className="text-xl font-semibold text-yellow-400">${balance.buffer?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-purple-400">${vaultBalance.payment_reserve?.toFixed(2) || '0.00'}</p>
               </div>
             </div>
           )}
 
-          {/* Emergency Withdraw Button */}
-          {isConnected && (
-            <div style={{marginTop: '16px'}}>
-              <button
-                onClick={emergencyWithdraw}
-                disabled={isWithdrawing}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #ef4444',
-                  color: '#ef4444',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  width: '100%',
-                  fontSize: '13px'
-                }}
-              >
-                {isWithdrawing ? '⏳ Withdrawing...' : '🚨 Emergency Withdraw All'}
-              </button>
-              <div style={{color: '#4b5563', fontSize: '10px', textAlign: 'center', marginTop: '4px'}}>
-                Returns all funds to your wallet instantly
-              </div>
-            </div>
+          {/* Emergency withdraw button */}
+          <div className="mt-6">
+            <button
+              onClick={emergencyWithdraw}
+              disabled={isWithdrawing}
+              style={{
+                background: 'transparent',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                padding: '10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                width: '100%',
+                fontSize: '13px'
+              }}
+            >
+              {isWithdrawing ? '⏳ Withdrawing...' : '🚨 Emergency Withdraw All'}
+            </button>
+          </div>
         </div>
 
-        {/* Center Panel - Chat */}
+        {/* CENTER PANEL */}
         <div className="w-1/3 border-r border-gray-800 flex flex-col">
+          {/* Butler avatar and title */}
           <div className="p-6 border-b border-gray-800">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#7c3aed] rounded-full flex items-center justify-center">
                 🤵
               </div>
-              <h2 className="text-lg font-semibold">Butler</h2>
+              <h2 className="text-lg font-semibold">CRYPTO BUTLER</h2>
             </div>
           </div>
 
+          {/* Chat messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {chatHistory.map((msg, index) => (
-              <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] p-3 rounded-2xl ${
-                  msg.type === 'user' 
+                  msg.role === 'user' 
                     ? 'bg-[#7c3aed] text-white' 
                     : 'bg-[#1e1e2a] text-gray-200'
                 }`}>
-                  <p className="text-sm">{msg.message}</p>
+                  <p className="text-sm">{msg.content}</p>
                   <p className="text-xs opacity-70 mt-1">{formatTime(msg.time)}</p>
                 </div>
               </div>
             ))}
-            
-            {/* Message Input */}
+          </div>
+
+          {/* Text input and send button */}
           <div className="p-4 border-t border-gray-800">
             <div className="flex gap-2">
               <input
                 type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Type your message..."
                 className="flex-1 bg-[#12121a] text-white px-4 py-3 rounded-xl border border-gray-700 focus:border-[#7c3aed] focus:outline-none"
-                disabled={loading}
               />
               <button
                 onClick={sendMessage}
-                disabled={loading || !message.trim() || !connectedAddress}
+                disabled={!inputMessage.trim() || !connectedAddress}
                 className="bg-[#7c3aed] text-white px-6 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#6d28d9] transition-colors"
               >
-                {loading ? '...' : 'Send'}
+                Send
               </button>
             </div>
           </div>
         </div>
-        </div>
 
-        {/* Right Panel - Everything Live */}
+        {/* RIGHT PANEL */}
         <div className="w-1/3 p-6 flex flex-col overflow-y-auto">
-          
-          {/* Live Activity */}
+          {/* Live Activity feed */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-4">Live Activity</h2>
-            
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {activity.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No activity yet</p>
@@ -514,16 +400,9 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
                 activity.map((item, index) => (
                   <div key={index} className="bg-[#12121a] p-3 rounded-xl">
                     <div className="flex items-start gap-3">
-                      <span className="text-lg">{getActivityEmoji(item.tx_type)}</span>
+                      <span className="text-lg">📄</span>
                       <div className="flex-1">
-                        <p className={`text-sm ${getActivityColor(item.tx_type)}`}>
-                          {item.tx_type === 'deposit' && `📈 Deployed $${item.amount} to ${item.protocol || 'Aave'}`}
-                          {item.tx_type === 'payment' && `💸 Sent $${item.amount} to ${formatAddress(item.to_address)}`}
-                          {item.tx_type === 'withdrawal' && `📉 Withdrew $${item.amount} from Aave`}
-                          {item.tx_type === 'yield' && `🌱 Earned $${item.amount} in yield`}
-                          {item.tx_type === 'activation' && `🤵 Butler activated with $${item.amount}`}
-                          {item.tx_type !== 'deposit' && item.tx_type !== 'payment' && item.tx_type !== 'withdrawal' && item.tx_type !== 'yield' && item.tx_type !== 'activation' && `${item.tx_type}: $${item.amount}`}
-                        </p>
+                        <p className="text-sm text-gray-300">{item.tx_type}: ${item.amount}</p>
                         <p className="text-xs text-gray-500">{formatTime(item.timestamp)}</p>
                       </div>
                     </div>
@@ -533,151 +412,57 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-gray-800 pt-4 mb-4"></div>
-
-          {/* Active Yield */}
+          {/* Current yields */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4">Active Yield</h2>
-            
-            {/* Session Yield Ticker */}
-            <div style={{
-              background: '#0a0a1a',
-              border: '1px solid #7c3aed',
-              borderRadius: '12px',
-              padding: '16px',
-              textAlign: 'center',
-              marginBottom: '12px'
-            }}>
-              <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '4px'}}>
-                PROJECTED YIELD (since activation)
-              </div>
-              <div style={{color: '#22c55e', fontSize: '24px', fontWeight: 'bold', fontFamily: 'monospace'}}>
-                +{sessionYield.toFixed(8)} USDC
-              </div>
-              <div style={{color: '#6b7280', fontSize: '10px', marginTop: '4px'}}>
-                Based on {yieldStatus?.apy}% APY — updates on compound
-              </div>
-            </div>
-
-            {/* Current Protocol Info */}
-            {yieldStatus && (
-              <div style={{
-                background: '#12121a',
-                borderRadius: '12px',
-                padding: '14px',
-                marginBottom: '12px'
-              }}>
-                <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>CURRENTLY DEPLOYED TO</div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                  <span style={{color: '#9ca3af'}}>Protocol</span>
-                  <span style={{color: 'white', textTransform: 'capitalize', fontWeight: 'bold'}}>{yieldStatus.protocol}</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                  <span style={{color: '#9ca3af'}}>APY</span>
-                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>{yieldStatus.apy}%</span>
-                </div>
-              </div>
-            )}
-
-            {/* Yield Projections */}
-            {yieldStatus && (
-              <div style={{
-                background: '#12121a',
-                borderRadius: '12px',
-                padding: '14px'
-              }}>
-                <div style={{color: '#6b7280', fontSize: '11px', marginBottom: '8px'}}>YIELD PROJECTIONS</div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                  <span style={{color: '#9ca3af'}}>Daily</span>
-                  <span style={{color: '#22c55e'}}>+{yieldStatus.daily_yield} USDC</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                  <span style={{color: '#9ca3af'}}>Weekly</span>
-                  <span style={{color: '#22c55e'}}>+{yieldStatus.weekly_yield} USDC</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                  <span style={{color: '#9ca3af'}}>Monthly</span>
-                  <span style={{color: '#22c55e'}}>+{yieldStatus.monthly_yield} USDC</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                  <span style={{color: '#9ca3af'}}>Yearly</span>
-                  <span style={{color: '#22c55e', fontWeight: 'bold'}}>+{yieldStatus.yearly_yield} USDC</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-gray-800 pt-4 mb-4"></div>
-
-          {/* Market Yields */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Market Yields</h2>
-            
+            <h2 className="text-lg font-semibold mb-4">Current Yields</h2>
             <div className="space-y-2">
               {Object.entries(yields).map(([protocol, apy]) => (
                 <div key={protocol} className="bg-[#12121a] p-3 rounded-lg flex justify-between items-center">
-                  <span style={{color: '#9ca3af', textTransform: 'capitalize'}}>{protocol}</span>
-                  <span style={{color: parseFloat(apy) === Math.max(...Object.values(yields)) ? '#22c55e' : '#9ca3af', fontWeight: 'bold'}}>
-                    {parseFloat(apy).toFixed(1)}%
-                  </span>
+                  <span className="text-gray-400 capitalize">{protocol}</span>
+                  <span className="text-green-400 font-bold">{parseFloat(apy).toFixed(1)}%</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Yield status */}
+          {yieldStatus && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-4">Yield Status</h2>
+              <div className="bg-[#12121a] p-4 rounded-xl">
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">Protocol</span>
+                  <span className="text-white capitalize">{yieldStatus.protocol}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">APY</span>
+                  <span className="text-green-400">{yieldStatus.apy}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Deployed</span>
+                  <span className="text-white">${yieldStatus.deployed_capital}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Session yield ticker */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4">Session Yield</h2>
+            <div className="bg-[#12121a] p-4 rounded-xl text-center">
+              <div className="text-gray-400 text-sm mb-2">Projected Yield (since activation)</div>
+              <div className="text-green-400 text-2xl font-bold">
+                +{sessionYield.toFixed(8)} USDC
+              </div>
+              <div className="text-gray-500 text-xs mt-2">
+                Based on {yieldStatus?.apy}% APY — updates on compound
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Notification Toast Container */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        {notifications.map(notification => (
-          <div
-            key={notification.id}
-            style={{
-              background: notification.type === 'success' ? '#052e16' : 
-                          notification.type === 'error' ? '#7f1d1d' : '#1e293b',
-              border: `1px solid ${notification.type === 'success' ? '#22c55e' : 
-                             notification.type === 'error' ? '#ef4444' : '#64748b'}`,
-              borderRadius: '8px',
-              padding: '12px 16px',
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: '500',
-              minWidth: '300px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-              animation: 'slideIn 0.3s ease-out'
-            }}
-          >
-            {notification.message}
-          </div>
-        ))}
-      </div>
-
-      {/* Add animation styles */}
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
-
-      {/* Butler Activation Modal */}
+      {/* MODAL POPUP */}
       {currentPlan && (
         <div style={{
           position: 'fixed',
