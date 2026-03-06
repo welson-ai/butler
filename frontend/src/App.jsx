@@ -449,48 +449,6 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
                 Returns all funds to your wallet instantly
               </div>
             </div>
-          )}
-
-          {/* Butler Activation Card */}
-          {currentPlan && (
-            <div style={{
-              background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-              border: '1px solid #22d3ee',
-              borderRadius: '16px',
-              padding: '20px',
-              marginTop: '20px'
-            }}>
-              <div style={{color: '#a78bfa', fontWeight: 'bold', marginBottom: '12px'}}>
-                ⚡ Butler Activation
-              </div>
-              <div style={{color: '#e5e7eb', fontSize: '14px', marginBottom: '16px'}}>
-                <div>💰 Deposit into vault: <strong>{currentPlan.usdc_total} USDC</strong></div>
-                <div>📈 Deploy to Aave: <strong>{currentPlan.aave_deposit} USDC</strong></div>
-                <div>💸 Payment reserve: <strong>{currentPlan.payment_reserve} USDC</strong></div>
-                <div>🛡️ Safety buffer: <strong>{currentPlan.buffer} USDC</strong></div>
-              </div>
-              <button
-                onClick={() => activateButler(currentPlan)}
-                disabled={isLoading}
-                style={{
-                  background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                  color: 'white',
-                  padding: '14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold',
-                  width: '100%',
-                  fontSize: '16px'
-                }}
-              >
-                {isLoading ? '⏳ Processing...' : '✅ Activate Butler — Deposit Now'}
-              </button>
-              <div style={{color: '#6b7280', fontSize: '11px', marginTop: '8px', textAlign: 'center'}}>
-                Two MetaMask popups — approve then deposit. One time only.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Center Panel - Chat */}
@@ -718,6 +676,117 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           }
         }
       `}</style>
+
+      {/* Butler Activation Modal */}
+      {currentPlan && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#12121a',
+            border: '1px solid #7c3aed',
+            borderRadius: '20px',
+            padding: '32px',
+            maxWidth: '420px',
+            width: '90%',
+            boxShadow: '0 0 60px rgba(124,58,237,0.3)'
+          }}>
+            <div style={{textAlign: 'center', marginBottom: '24px'}}>
+              <div style={{fontSize: '40px', marginBottom: '8px'}}>🤵</div>
+              <div style={{color: 'white', fontSize: '20px', fontWeight: 'bold'}}>
+                Butler Activation
+              </div>
+              <div style={{color: '#9ca3af', fontSize: '14px', marginTop: '4px'}}>
+                Review your plan before activating
+              </div>
+            </div>
+
+            <div style={{
+              background: '#0a0a0f',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '20px'
+            }}>
+              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+                <span style={{color: '#9ca3af'}}>Total USDC</span>
+                <span style={{color: 'white', fontWeight: 'bold'}}>{currentPlan.usdc_total} USDC</span>
+              </div>
+              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+                <span style={{color: '#9ca3af'}}>📈 Earning Yield</span>
+                <span style={{color: '#22c55e', fontWeight: 'bold'}}>{currentPlan.aave_deposit} USDC</span>
+              </div>
+              {currentPlan.payment_reserve > 0 && (
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
+                  <span style={{color: '#9ca3af'}}>💸 Payment Reserve</span>
+                  <span style={{color: '#3b82f6', fontWeight: 'bold'}}>{currentPlan.payment_reserve} USDC</span>
+                </div>
+              )}
+              {currentPlan.buffer > 0 && (
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <span style={{color: '#9ca3af'}}>🛡️ Safety Buffer</span>
+                  <span style={{color: '#f59e0b', fontWeight: 'bold'}}>{currentPlan.buffer} USDC</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              background: '#0d1f0d',
+              border: '1px solid #22c55e33',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginBottom: '20px',
+              fontSize: '12px',
+              color: '#9ca3af'
+            }}>
+              ✅ Two MetaMask confirmations required — approve USDC then deposit into vault. One time only.
+            </div>
+
+            <div style={{display: 'flex', gap: '12px'}}>
+              <button
+                onClick={() => setCurrentPlan(null)}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: '1px solid #4b5563',
+                  color: '#9ca3af',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontSize: '15px'
+                }}
+              >
+                ✕ Cancel
+              </button>
+              <button
+                onClick={() => activateButler(currentPlan)}
+                disabled={isLoading}
+                style={{
+                  flex: 2,
+                  background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: 'white',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}
+              >
+                {isLoading ? '⏳ Processing...' : '✅ Yes — Activate Butler'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
