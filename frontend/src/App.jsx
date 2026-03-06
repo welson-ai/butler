@@ -52,6 +52,16 @@ export default function App() {
   const [liveYield, setLiveYield] = useState(0)
   const [yieldStatus, setYieldStatus] = useState(null)
   const [sessionYield, setSessionYield] = useState(0)
+  const [notifications, setNotifications] = useState([])
+
+  // Add notification function
+  const addNotification = (message, type = 'info') => {
+    const id = Date.now()
+    setNotifications(prev => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }, 5000)
+  }
 
   // Register wallet on connect
   useEffect(() => {
@@ -201,10 +211,7 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           functionName: 'approve',
           args: [VAULT_ADDRESS, amount]
         })
-        setMessages(prev => [...prev, {
-          role: 'butler',
-          content: 'USDC approved ✅ Now depositing into vault...'
-        }])
+        addNotification('USDC approved ✅ Now depositing into vault...', 'success')
 
         // Deposit into vault
         await writeContractAsync({
@@ -215,50 +222,41 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
         })
       }
 
-      setMessages(prev => [...prev, {
-        role: 'butler',
-        content: '🎉 Butler fully activated. Your money is working. You can close this app — I will keep going.'
-      }])
-
+      addNotification('🎉 Butler fully activated. Your money is working. You can close this app — I will keep going.', 'success')
       setCurrentPlan(null)
       fetchBalance()
     } catch (error) {
       console.error('Activation error:', error)
-      setMessages(prev => [...prev, {
-        role: 'butler',
-        content: 'Deposit failed. Please try again.'
-      }])
+      addNotification('Deposit failed. Please try again.', 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   const emergencyWithdraw = async () => {
-    if (!confirm('Withdraw all funds from vault back to your wallet?')) return
-    try {
-      setIsWithdrawing(true)
-      await emergencyWrite({
-        address: VAULT_ADDRESS,
-        abi: [{
-          name: 'emergencyWithdraw',
-          type: 'function',
-          inputs: [],
-          outputs: [],
-          stateMutability: 'nonpayable'
-        }],
-        functionName: 'emergencyWithdraw'
-      })
-      setMessages(prev => [...prev, {
-        role: 'butler',
-        content: '✅ Emergency withdrawal complete. All funds returned to your wallet.'
-      }])
-      fetchBalance()
-    } catch(e) {
-      console.error('Withdraw error:', e)
-    } finally {
-      setIsWithdrawing(false)
-    }
+  if (!confirm('Withdraw all funds from vault back to your wallet?')) return
+  try {
+    setIsWithdrawing(true)
+    await emergencyWrite({
+      address: VAULT_ADDRESS,
+      abi: [{
+        name: 'emergencyWithdraw',
+        type: 'function',
+        inputs: [],
+        outputs: [],
+        stateMutability: 'nonpayable'
+      }],
+      functionName: 'emergencyWithdraw'
+    })
+    addNotification('✅ Emergency withdrawal complete. All funds returned to your wallet.', 'success')
+    fetchBalance()
+  } catch(e) {
+    console.error('Withdraw error:', e)
+    addNotification('Emergency withdrawal failed. Please try again.', 'error')
+  } finally {
+    setIsWithdrawing(false)
   }
+}
 
   const sendMessage = async () => {
   if (!message.trim() || !connectedAddress) return;
@@ -672,6 +670,54 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           </div>
         </div>
       </div>
+
+      {/* Notification Toast Container */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}>
+        {notifications.map(notification => (
+          <div
+            key={notification.id}
+            style={{
+              background: notification.type === 'success' ? '#052e16' : 
+                          notification.type === 'error' ? '#7f1d1d' : '#1e293b',
+              border: `1px solid ${notification.type === 'success' ? '#22c55e' : 
+                             notification.type === 'error' ? '#ef4444' : '#64748b'}`,
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '500',
+              minWidth: '300px',
+              maxWidth: '400px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+              animation: 'slideIn 0.3s ease-out'
+            }}
+          >
+            {notification.message}
+          </div>
+        ))}
+      </div>
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   )
 }
