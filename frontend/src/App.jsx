@@ -261,23 +261,24 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
   }
 
   const sendMessage = async () => {
-    if (!message.trim() || !connectedAddress) return
+  if (!message.trim() || !connectedAddress) return;
 
-    const userMessage = message.trim()
-    setMessage('')
-    setLoading(true)
+  const userMessage = message.trim();
+  setMessage('');
+  setLoading(true);
 
+  try {
     // First check vault balance
-    const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
-    const vaultBalance = balanceRes.data?.vault_balance || 0
+    const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`);
+    const vaultBalance = balanceRes.data?.vault_balance || 0;
 
     const response = await axios.post(`${API_BASE}/api/chat`, {
       wallet_address: connectedAddress,
       message: userMessage
-    })
+    });
 
-    const plan = response.data.plan
-    const reply = response.data.reply
+    const plan = response.data.plan;
+    const reply = response.data.reply;
 
     setChatHistory(prev => [...prev, {
       type: 'butler',
@@ -293,16 +294,16 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
           message: `✅ I can see ${vaultBalance} USDC already in your vault. Activating your plan now without a new deposit.`,
           time: new Date().toISOString()
         }]);
-        setCurrentPlan({ ...plan, already_funded: true })
+        setCurrentPlan({ ...plan, already_funded: true });
       } else if (vaultBalance > 0 && vaultBalance < plan.usdc_total) {
         setChatHistory(prev => [...prev, {
           type: 'butler',
           message: `I can see ${vaultBalance} USDC already in your vault. You need ${plan.usdc_total} USDC total — please deposit ${(plan.usdc_total - vaultBalance).toFixed(2)} more USDC.`,
           time: new Date().toISOString()
         }]);
-        setCurrentPlan(plan)
+        setCurrentPlan(plan);
       } else {
-        setCurrentPlan(plan)
+        setCurrentPlan(plan);
       }
     }
 
@@ -317,7 +318,7 @@ const [isWithdrawing, setIsWithdrawing] = useState(false)
   } finally {
     setLoading(false);
   }
-}
+};
 
   const getActivityEmoji = (txType) => {
     switch (txType) {
