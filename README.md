@@ -2,7 +2,7 @@
 
 Crypto Butler is an intelligent, autonomous DeFi wealth management agent that revolutionizes how users interact with decentralized finance. By leveraging natural language processing and smart contract automation, Crypto Butler connects to any Web3 wallet, optimizes USDC yields across DeFi protocols, compounds earnings automatically, and executes scheduled payments — all without human intervention after the initial setup.
 
-## 🎯 Problem Statement
+##  Problem Statement
 
 ### Current DeFi Challenges
 - **Complex User Experience**: DeFi requires deep technical knowledge and constant monitoring
@@ -19,7 +19,7 @@ Crypto Butler addresses these challenges by providing:
 - **Scheduled Financial Operations**: Automated payments, savings, and investment strategies
 - **Real-time Transparency**: Complete visibility into all operations through an intuitive dashboard
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -113,7 +113,7 @@ crypto-butler/
     └── 📄 SECURITY.md              # Security considerations
 ```
 
-## 🧠 Core Components
+## Core Components
 
 ### Frontend Architecture
 
@@ -232,21 +232,21 @@ crypto-butler/
                                     └─────────────┘
 ```
 
-## 🚀 Key Features
+## Key Features
 
-### 🤖 Autonomous Intelligence
+### Autonomous Intelligence
 - **Natural Language Processing**: Users communicate in plain English
 - **Intent Recognition**: Claude AI parses complex financial instructions
 - **Rule Generation**: Automatically converts user goals into executable rules
 - **Adaptive Learning**: System learns from user preferences and behaviors
 
-### 💰 Yield Optimization
+###  Yield Optimization
 - **Multi-Protocol Support**: Aave, Compound, Curve, and more
 - **Real-Time Monitoring**: Continuous yield rate tracking
 - **Automatic Rebalancing**: Moves funds to highest-yielding protocols
 - **Risk-Adjusted Returns**: Balances APY against risk factors
 
-### ⏰ Scheduled Operations
+###  Scheduled Operations
 - **Recurring Payments**: Weekly, monthly, or custom payment schedules
 - **Yield Compounding**: Automatic reinvestment of earned yield
 - **Buffer Management**: Maintains safety buffers for payments
@@ -258,30 +258,30 @@ crypto-butler/
 - **Performance Metrics**: Yield performance, ROI tracking
 - **Alert System**: Notifications for important events
 
-### 🛡️ Security & Risk Management
+###  Security & Risk Management
 - **Multi-Signature Support**: Additional security layers for large transactions
 - **Spending Limits**: Configurable daily/weekly transaction limits
 - **Risk Profiles**: Conservative, moderate, and aggressive risk levels
 - **Emergency Controls**: Instant fund withdrawal and plan cancellation
 
-## 🎯 Use Cases
+## Use Cases
 
-### 🏠 Personal Finance Automation
+###  Personal Finance Automation
 - **Automated Savings**: "Save $100 every month and grow it safely"
 - **Bill Payments**: "Pay $500 for rent on the 1st of every month"
 - **Investment Growth**: "Invest 50% of my income in the highest-yielding protocol"
 
-### 💼 Business Treasury Management
+### Business Treasury Management
 - **Payroll Automation**: "Pay employee salaries on the 15th and 30th"
 - **Vendor Payments**: "Pay $2000 to supplier wallet every Monday"
 - **Yield Optimization**: "Maximize returns on company treasury while maintaining liquidity"
 
-### 🎓 Educational & Non-Profit
+### Educational & Non-Profit
 - **Scholarship Disbursements**: "Send $250 to student wallets monthly"
 - **Grant Management**: "Distribute grant funds according to schedule"
 - **Endowment Growth**: "Grow endowment while making annual distributions"
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Frontend Technologies
 - **React 18**: Modern UI framework with hooks and concurrent features
@@ -313,7 +313,7 @@ crypto-butler/
 - **Environment Variables**: Secure configuration management
 - **Git Version Control**: Track changes and collaboration
 
-## 📋 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 - **Node.js 18+**: JavaScript runtime for frontend
@@ -322,7 +322,7 @@ crypto-butler/
 - **Base Sepolia ETH**: For gas fees on testnet
 - **USDC on Base Sepolia**: For testing deposits and yields
 
-### 🚀 Quick Start
+###  Quick Start
 
 #### 1. Clone Repository
 ```bash
@@ -385,7 +385,7 @@ npx hardhat run scripts/deploy.js --network baseSepolia
 # Update environment variables with deployed addresses
 ```
 
-### 🔧 Environment Configuration
+###  Environment Configuration
 
 #### Frontend (.env)
 ```env
@@ -405,7 +405,7 @@ BUTLER_VAULT_ADDRESS=0x...
 TEST_CLOCK_INTERVAL=180  # 3 minutes = 1 day for testing
 ```
 
-## 🎮 Usage Guide
+##  Usage Guide
 
 ### 1. **Wallet Connection**
 - Click "Connect Wallet" in the top-left corner
@@ -437,7 +437,7 @@ TEST_CLOCK_INTERVAL=180  # 3 minutes = 1 day for testing
 - Monitor scheduled payments and transactions
 - Use emergency withdraw if needed
 
-## 🧪 Testing & Development
+## Testing & Development
 
 ### Test Users
 The system includes pre-configured test users:
@@ -458,46 +458,46 @@ This allows rapid testing of scheduled operations without waiting for real-time 
 - **Mock Transactions**: Pre-populated transaction history
 - **Mock Users**: Test user profiles with different scenarios
 
-## 🔒 Security Considerations
+##  Security Considerations
 
-### 🔐 Private Key Security
+###  Private Key Security
 - **No Key Storage**: Private keys never stored in application
 - **Wallet-Only Signing**: All transactions signed in user wallet
 - **Hardware Wallet Support**: Compatible with Ledger and Trezor
 
-### 🛡️ Risk Management
+###  Risk Management
 - **Spending Limits**: Configurable daily/weekly limits
 - **Multi-Signature**: Optional multi-sig for large transactions
 - **Emergency Controls**: Instant stop and withdraw capabilities
 - **Audit Trail**: Complete transaction history and logging
 
-### ⚡ Smart Contract Security
+### Smart Contract Security
 - **Open Source**: All contracts auditable and verified
 - **Standard Interfaces**: ERC20 and established DeFi patterns
 - **Upgrade Safe**: Proxy patterns for safe contract upgrades
 - **Test Coverage**: Comprehensive test suite
 
-## 📈 Performance Metrics
+##  Performance Metrics
 
-### 🎯 Yield Optimization
+###  Yield Optimization
 - **Protocol Switching**: Automatic rebalancing to highest APY
 - **Gas Optimization**: Batch transactions and optimal timing
 - **Compound Frequency**: Daily, weekly, or monthly compounding
 - **Risk-Adjusted Returns**: Balance yield generation vs risk
 
-### ⚡ System Performance
+### System Performance
 - **Real-Time Updates**: <100ms UI refresh rates
 - **API Response**: <200ms average response time
 - **WebSocket Latency**: <50ms message delivery
 - **Transaction Speed**: Optimized for Base L2 performance
 
-### 📊 Analytics & Monitoring
+### Analytics & Monitoring
 - **ROI Tracking**: Real-time return on investment calculation
 - **Yield Attribution**: Protocol-specific yield breakdown
 - **Transaction Analytics**: Gas costs, success rates, timing
 - **User Behavior**: Interaction patterns and preferences
 
-## 🚀 Roadmap
+## Roadmap
 
 ### 📅 Phase 1 (Current)
 - ✅ Basic Butler functionality
@@ -531,23 +531,23 @@ This allows rapid testing of scheduled operations without waiting for real-time 
 
 We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### 🐛 Bug Reports
+###  Bug Reports
 - Use GitHub Issues for bug reports
 - Include detailed reproduction steps
 - Provide environment details
 
-### 💡 Feature Requests
+### Feature Requests
 - Open an issue with "Feature Request" label
 - Describe the use case and benefits
 - Consider implementation complexity
 
-### 🔧 Code Contributions
+### Code Contributions
 - Fork the repository
 - Create a feature branch
 - Add tests for new functionality
 - Submit a pull request
 
-## 📞 Support & Community
+##  Support & Community
 
 - **Discord**: [Join our Discord](https://discord.gg/crypto-butler)
 - **Twitter**: [@CryptoButlerAI](https://twitter.com/CryptoButlerAI)
@@ -558,7 +558,7 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - **Claude AI**: For natural language processing capabilities
 - **Aave**: For providing excellent DeFi infrastructure
