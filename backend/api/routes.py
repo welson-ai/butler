@@ -46,59 +46,117 @@ def chat():
         rules = RulesEngine()
         store = UserStore()
         
-        parsed = brain.parse_instruction(message, wallet_address)
-        print(f"DEBUG parsed: {parsed}")
+        # Get user data for conversation context
+        user = store.get_user(wallet_address)
         
-        if 'error' in parsed or parsed.get('usdc_total', 0) == 0:
+        # Check if this is a setup instruction (old flow) or conversational (new flow)
+        setup_keywords = ['have', 'send', 'every', 'grow', 'deposit', 'pay']
+        is_setup_instruction = any(keyword in message.lower() for keyword in setup_keywords)
+        
+        if is_setup_instruction:
+            # Use old setup flow for explicit instructions
+            parsed = brain.parse_instruction(message, wallet_address)
+            print(f"DEBUG parsed: {parsed}")
+            
+            if 'error' in parsed or parsed.get('usdc_total', 0) == 0:
+                return jsonify({
+                    'reply': "Hello! To get started tell me: how much USDC you have, where to send payments, and how often. For example: I have 20 USDC. Send 5 to wallet 0xABC123 every Friday and grow the rest safely.",
+                    'plan': None,
+                    'status': 'awaiting_instruction'
+                })
+            
+            plan = rules.build_plan(parsed, wallet_address)
+            print(f"DEBUG plan: {plan}")
+            
+            is_valid = rules.validate_plan(plan)
+            store.save_user(wallet_address, plan)
+
+            # If yield requested and capital available - deploy automatically
+            if plan.get('yield_requested', False) and plan.get('aave_deposit', 0) > 0:
+                try:
+                    from protocols.vault import ButlerVault
+                    from protocols.mock_yields import MockYieldEngine
+                    vault = ButlerVault()
+                    yields = MockYieldEngine()
+
+                    balance = vault.get_user_balance(wallet_address)
+                    deploy_amount = plan.get('aave_deposit', 0)
+
+                    if balance['vault_balance'] >= deploy_amount:
+                        tx_hash = vault.deploy_to_aave(wallet_address, deploy_amount)
+                        best_protocol, best_apy = yields.get_best_yield(plan.get('risk_level', 'moderate'))
+                        print(f" Auto deployed {deploy_amount} USDC to {best_protocol} at {best_apy}% - tx: {tx_hash}")
+                        plan['yield_tx'] = tx_hash
+                        plan['protocol'] = best_protocol
+                        plan['apy'] = best_apy
+                        
+                        # Log the auto-deployment to activity feed
+                        store.log_transaction(
+                            wallet_address=wallet_address,
+                            tx_type='deposit',
+                            amount=deploy_amount,
+                            tx_hash=tx_hash
+                        )
+                    else:
+                        print(f" Insufficient vault balance for auto-deploy")
+                except Exception as e:
+                    print(f"Auto yield deploy error: {e}")
+
+            reply = brain.generate_response(plan, wallet_address)
             return jsonify({
-                'reply': "Hello! To get started tell me: how much USDC you have, where to send payments, and how often. For example: I have 20 USDC. Send 5 to wallet 0xABC123 every Friday and grow the rest safely.",
-                'plan': None,
-                'status': 'awaiting_instruction'
+                'reply': reply,
+                'plan': plan,
+                'status': 'plan_created'
             })
         
-        plan = rules.build_plan(parsed, wallet_address)
-        print(f"DEBUG plan: {plan}")
-        
-        is_valid = rules.validate_plan(plan)
-        store.save_user(wallet_address, plan)
-
-        # If yield requested and capital available — deploy automatically
-        if plan.get('yield_requested', False) and plan.get('aave_deposit', 0) > 0:
-            try:
-                from protocols.vault import ButlerVault
-                from protocols.mock_yields import MockYieldEngine
-                vault = ButlerVault()
-                yields = MockYieldEngine()
-
-                balance = vault.get_user_balance(wallet_address)
-                deploy_amount = plan.get('aave_deposit', 0)
-
-                if balance['vault_balance'] >= deploy_amount:
-                    tx_hash = vault.deploy_to_aave(wallet_address, deploy_amount)
-                    best_protocol, best_apy = yields.get_best_yield(plan.get('risk_level', 'moderate'))
-                    print(f"📈 Auto deployed {deploy_amount} USDC to {best_protocol} at {best_apy}% — tx: {tx_hash}")
-                    plan['yield_tx'] = tx_hash
-                    plan['protocol'] = best_protocol
-                    plan['apy'] = best_apy
-                    
-                    # Log the auto-deployment to activity feed
-                    user_store.log_transaction(
-                        wallet_address=wallet_address,
-                        tx_type='deposit',
-                        amount=deploy_amount,
-                        tx_hash=tx_hash
-                    )
-                else:
-                    print(f"Vault balance {balance['vault_balance']} insufficient for {deploy_amount} USDC deploy")
-            except Exception as e:
-                print(f"Auto yield deploy error: {e}")
-
-        reply = brain.generate_response(plan, wallet_address)
-        return jsonify({
-            'reply': reply,
-            'plan': plan,
-            'status': 'active'
-        })
+        # Use new conversation flow for everything else
+        try:
+            from protocols.aave import AaveProtocol
+            from agent.executor import ButlerExecutor
+            from protocols.mock_yields import MockYieldEngine
+            from agent.yield_monitor import YieldMonitor
+            
+            aave = AaveProtocol()
+            executor = ButlerExecutor()
+            yield_engine = MockYieldEngine()
+            yield_monitor = YieldMonitor()
+            
+            # Get current balances and yield data
+            usdc_balance = aave.get_usdc_balance(wallet_address)
+            vault_balance = executor.get_user_balance(wallet_address)
+            yield_data = yield_engine.get_all_yields()
+            
+            # Combine vault data
+            vault_data = {
+                'usdc_balance': usdc_balance,
+                'vault_balance': vault_balance.get('vault_balance', 0),
+                'aave_deposit': vault_balance.get('aave_balance', 0),
+                'payment_reserve': vault_balance.get('payment_reserve', 0),
+                'buffer': vault_balance.get('buffer', 0),
+                'yield_earned': vault_balance.get('yield_earned', 0)
+            }
+            
+            # Get conversational response
+            response = brain.get_financial_advice(message, wallet_address, user, vault_data, yield_data)
+            
+            return jsonify({
+                'reply': response,
+                'plan': None,
+                'status': 'conversational_response',
+                'context': {
+                    'vault_data': vault_data,
+                    'user_data': user,
+                    'yield_data': yield_data
+                }
+            })
+            
+        except Exception as e:
+            print(f"Error in conversation flow: {e}")
+            return jsonify({
+                'reply': "I'm having trouble accessing your financial data right now. Please try again in a moment.",
+                'plan': None,
+                'status': 'data_error'
+            })
     except Exception as e:
         print(f"DEBUG error: {e}")
         return jsonify({'error': str(e)}), 500
