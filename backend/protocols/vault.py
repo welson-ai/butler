@@ -107,9 +107,9 @@ ERC20_ABI = [
 
 class ButlerVault:
     def __init__(self):
-        self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_SEPOLIA_RPC_URL')))
+        self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_RPC_URL')))
         self.vault_address = os.getenv('BUTLER_VAULT_ADDRESS')
-        self.usdc_address = os.getenv('USDC_SEPOLIA_ADDRESS')
+        self.usdc_address = os.getenv('USDC_ADDRESS')
         self.agent_private_key = os.getenv('AGENT_PRIVATE_KEY')
         self.agent_address = Account.from_key(self.agent_private_key).address
         

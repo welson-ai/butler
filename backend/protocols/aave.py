@@ -40,13 +40,13 @@ class AaveProtocol:
         """
         Initialize Aave protocol handler
         """
-        # Connect to Base Sepolia via Web3
-        self.rpc_url = os.getenv('BASE_SEPOLIA_RPC_URL')
+        # Connect to Base Mainnet via Web3
+        self.rpc_url = os.getenv('BASE_RPC_URL')
         self.web3 = Web3(Web3.HTTPProvider(self.rpc_url))
         
         # Load contracts
-        self.usdc_address = os.getenv('USDC_SEPOLIA_ADDRESS')
-        self.aave_pool_address = os.getenv('AAVE_POOL_SEPOLIA_ADDRESS')
+        self.usdc_address = os.getenv('USDC_ADDRESS')
+        self.aave_pool_address = os.getenv('AAVE_POOL_ADDRESS')
         
         self.usdc_contract = self.web3.eth.contract(
             address=self.usdc_address,
@@ -58,7 +58,7 @@ class AaveProtocol:
             abi=AAVE_POOL_ABI
         )
         
-        print(f"Connected to Base Sepolia: {self.web3.is_connected()}")
+        print(f"Connected to Base Mainnet: {self.web3.is_connected()}")
     
     def get_usdc_balance(self, wallet_address: str) -> float:
         """

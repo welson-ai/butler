@@ -6,7 +6,7 @@ import axios from 'axios'
 
 const API_BASE = 'http://localhost:5001'
 const VAULT_ADDRESS = import.meta.env.VITE_BUTLER_VAULT_ADDRESS
-const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
 const VAULT_ABI = [
   {
