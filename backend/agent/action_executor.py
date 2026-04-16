@@ -18,9 +18,19 @@ class ActionExecutor:
         """
         message_lower = user_message.lower()
         
-        # Parse amounts
-        amounts = re.findall(r'(\d+\.?\d*)\s*(?:usdc|usd|\$)?', message_lower)
-        amount = float(amounts[0]) if amounts else 0
+        # Parse amounts - handle common typos like 'o.1' instead of '0.1'
+        # First normalize common typos
+        message_normalized = message_lower.replace('o.', '0.').replace('o ', '0 ')
+        amounts = re.findall(r'(\d+\.?\d*)\s*(?:usdc|usd|\$)?', message_normalized)
+        
+        # Filter out unrealistic amounts (too large) and get the most reasonable
+        valid_amounts = []
+        for amt in amounts:
+            val = float(amt)
+            if 0.01 <= val <= 10000:  # Reasonable range for USDC amounts
+                valid_amounts.append(val)
+        
+        amount = valid_amounts[0] if valid_amounts else 0
         
         # Check for yield/deposit intent
         if any(word in message_lower for word in ['earn yield', 'deposit', 'put to work', 'grow', 'invest', 'take']):
