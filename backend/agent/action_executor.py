@@ -71,27 +71,36 @@ class ActionExecutor:
         
         try:
             if action_type == "deposit_yield":
-                result = self.executor.execute_deposit_to_aave(
-                    wallet_address, 
-                    action.get('amount', 0)
-                )
+                # Return wallet approval action instead of executing directly
                 return {
-                    "success": result.get('success', False),
-                    "tx_hash": result.get('tx_hash'),
-                    "message": f"Deposited {action.get('amount', 0)} USDC to Aave successfully!",
-                    "error": result.get('error') if not result.get('success') else None
+                    "success": True,
+                    "requires_wallet_approval": True,
+                    "action_type": "deposit_yield",
+                    "amount": action.get('amount', 0),
+                    "protocol": action.get('protocol', 'Aave'),
+                    "message": f"Please approve deposit of {action.get('amount', 0)} USDC to {action.get('protocol', 'Aave')} in your wallet.",
+                    "wallet_action": {
+                        "type": "deposit",
+                        "amount": action.get('amount', 0),
+                        "protocol": action.get('protocol', 'Aave'),
+                        "apy": action.get('apy', 6.2)
+                    }
                 }
             
             elif action_type == "withdraw":
-                result = self.executor.execute_withdrawal_from_aave(
-                    wallet_address,
-                    action.get('amount', 0)
-                )
+                # Return wallet approval action instead of executing directly
                 return {
-                    "success": result.get('success', False),
-                    "tx_hash": result.get('tx_hash'),
-                    "message": f"Withdrew {action.get('amount', 0)} USDC from Aave successfully!",
-                    "error": result.get('error') if not result.get('success') else None
+                    "success": True,
+                    "requires_wallet_approval": True,
+                    "action_type": "withdraw",
+                    "amount": action.get('amount', 0),
+                    "protocol": action.get('protocol', 'Aave'),
+                    "message": f"Please approve withdrawal of {action.get('amount', 0)} USDC from {action.get('protocol', 'Aave')} in your wallet.",
+                    "wallet_action": {
+                        "type": "withdraw",
+                        "amount": action.get('amount', 0),
+                        "protocol": action.get('protocol', 'Aave')
+                    }
                 }
             
             elif action_type == "send_payment":

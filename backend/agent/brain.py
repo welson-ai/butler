@@ -213,13 +213,9 @@ Return ONLY this exact JSON - no markdown no backticks:
                         action = msg.get('content', {}).get('action')
                         if action:
                             result = action_executor.execute_action(action, wallet_address)
-                            if result.get('success'):
-                                response = f"Success! {result.get('message')}"
-                            else:
-                                response = f"Error: {result.get('message')}"
                             
-                            self.save_server_conversation_history(wallet_address, user_message, response)
-                            return response
+                            self.save_server_conversation_history(wallet_address, user_message, result)
+                            return result
                 
                 # No pending action found, proceed with normal flow
                 pass

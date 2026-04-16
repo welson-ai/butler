@@ -132,6 +132,20 @@
       "amount": 0.1,
       "tx_hash": "a4f876eaac1265ae2dd84c2435a6b0dc27a5891fa84f3a340cbb9525afa30b8b",
       "timestamp": "2026-04-16T07:25:20.362120"
+    },
+    {
+      "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608",
+      "tx_type": "deposit",
+      "amount": 1.0,
+      "tx_hash": "76f4692829c6d967564055326a0ee91c8bf72be24e0d02237ecf5742f66b2e23",
+      "timestamp": "2026-04-16T07:28:22.036053"
+    },
+    {
+      "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608",
+      "tx_type": "aave_deposit",
+      "amount": 1.0,
+      "tx_hash": "76f4692829c6d967564055326a0ee91c8bf72be24e0d02237ecf5742f66b2e23",
+      "timestamp": "2026-04-16T07:28:22.040307"
     }
   ]
 }

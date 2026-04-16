@@ -285,8 +285,20 @@ export default function App() {
         action: action
       })
 
-      if (response.data.status === 'action_executed') {
-        // Success message
+      if (response.data.requires_wallet_approval) {
+        // Show wallet approval message
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: response.data.message,
+          time: new Date().toISOString(),
+          walletAction: response.data.wallet_action,
+          requiresWalletApproval: true
+        }])
+        
+        // Trigger MetaMask transaction
+        await executeWalletAction(response.data.wallet_action)
+      } else if (response.data.status === 'action_executed') {
+        // Success message (for non-wallet actions)
         setMessages(prev => [...prev, {
           role: 'butler',
           content: `Success! ${response.data.message}`,
@@ -312,6 +324,63 @@ export default function App() {
       }])
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Execute wallet action via MetaMask
+  const executeWalletAction = async (walletAction) => {
+    try {
+      const amount = parseUnits(walletAction.amount.toString(), 6)
+      
+      if (walletAction.type === 'deposit') {
+        // Approve USDC
+        await writeContractAsync({
+          address: USDC_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [VAULT_ADDRESS, amount]
+        })
+        
+        // Deposit into vault
+        const txHash = await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'deposit',
+          args: [amount]
+        })
+        
+        // Success message
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: `Success! Deposited ${walletAction.amount} USDC to ${walletAction.protocol}. Transaction: ${txHash}`,
+          time: new Date().toISOString()
+        }])
+        
+        fetchBalance()
+      } else if (walletAction.type === 'withdraw') {
+        // Withdraw from vault
+        const txHash = await writeContractAsync({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'emergencyWithdraw'
+        })
+        
+        // Success message
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: `Success! Withdrew ${walletAction.amount} USDC from ${walletAction.protocol}. Transaction: ${txHash}`,
+          time: new Date().toISOString()
+        }])
+        
+        fetchBalance()
+      }
+    } catch (error) {
+      console.error('Wallet action error:', error)
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: `Error executing wallet action: ${error.message}`,
+        time: new Date().toISOString()
+      }])
     }
   }
 
