@@ -4,133 +4,6 @@
       "conversation_history": [
         {
           "role": "user",
-          "content": "take 0.1 usdc and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
-            "action": {
-              "type": "deposit_yield",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "success": true,
-            "requires_wallet_approval": true,
-            "action_type": "deposit_yield",
-            "amount": 0.1,
-            "protocol": "Aave",
-            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
-            "wallet_action": {
-              "type": "deposit",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "take 0.1 usdc and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
-            "action": {
-              "type": "deposit_yield",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "success": true,
-            "requires_wallet_approval": true,
-            "action_type": "deposit_yield",
-            "amount": 0.1,
-            "protocol": "Aave",
-            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
-            "wallet_action": {
-              "type": "deposit",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "take 0.1 usdc and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
-            "action": {
-              "type": "deposit_yield",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "success": true,
-            "requires_wallet_approval": true,
-            "action_type": "deposit_yield",
-            "amount": 0.1,
-            "protocol": "Aave",
-            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
-            "wallet_action": {
-              "type": "deposit",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "take 0.1 usdc ands earn yiELD"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
-            "action": {
-              "type": "deposit_yield",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
           "content": "YES"
         },
         {
@@ -180,6 +53,80 @@
               "protocol": "Aave",
               "apy": 6.2
             }
+          }
+        },
+        {
+          "role": "user",
+          "content": "help me budget and manage 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Hey! 20 USDC to work with \u2014 let's make sure it's doing something useful for you.\n\nDo you have any upcoming payments \u2014 payroll, rent, bills \u2014 that this needs to cover?"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "help you manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
+          }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
+          }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
+          }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
+          }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
           }
         }
       ],
@@ -235,6 +182,14 @@
               "apy": 6.2
             }
           }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Hey! Happy to help you make the most of that $20 USDC.\n\nDo you have any upcoming payments \u2014 payroll, rent, bills \u2014 that you'd need to pull from this?"
         }
       ],
       "user_id": "user_002",
