@@ -4,6 +4,7 @@ import json
 import os
 from dotenv import load_dotenv
 from .payment_parser import payment_parser
+from .action_executor import action_executor
 
 load_dotenv()
 
@@ -196,9 +197,18 @@ Return ONLY this exact JSON - no markdown no backticks:
             yield_data: Current yield rates and protocol data
             
         Returns:
-            String response with financial advice
+            String response with financial advice or action response
         """
         try:
+            # FIRST: Check for clear action intents
+            action = action_executor.parse_action_intent(user_message, wallet_address)
+            if action:
+                # Return structured action response for frontend
+                action_response = action_executor.format_action_response(action)
+                # Save conversation history
+                self.save_server_conversation_history(wallet_address, user_message, action_response.get('message', ''))
+                return action_response
+            
             # Get conversation history from server-side storage
             conversation_history = self.get_server_conversation_history(wallet_address)
             

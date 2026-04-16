@@ -19,6 +19,7 @@ from users.rules_engine import RulesEngine
 from users.user_store import UserStore
 from agent.executor import ButlerExecutor
 from agent.payment_parser import payment_parser
+from agent.action_executor import action_executor
 from protocols.mock_yields import MockYieldEngine
 from protocols.aave import AaveProtocol
 
@@ -598,5 +599,36 @@ def activate_payment_plan():
         else:
             return jsonify({'error': 'No payments to activate'}), 400
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/api/execute-action', methods=['POST'])
+def execute_action():
+    """Execute a confirmed action"""
+    try:
+        data = request.get_json()
+        wallet_address = data.get('wallet_address')
+        action = data.get('action')
+        
+        if not wallet_address or not action:
+            return jsonify({'error': 'Missing wallet_address or action'}), 400
+        
+        # Execute the action
+        result = action_executor.execute_action(action, wallet_address)
+        
+        if result.get('success'):
+            return jsonify({
+                'status': 'action_executed',
+                'message': result.get('message'),
+                'tx_hash': result.get('tx_hash'),
+                'action_type': action.get('type')
+            })
+        else:
+            return jsonify({
+                'status': 'action_failed',
+                'message': result.get('message'),
+                'error': result.get('error')
+            }), 400
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
