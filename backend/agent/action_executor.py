@@ -23,7 +23,7 @@ class ActionExecutor:
         amount = float(amounts[0]) if amounts else 0
         
         # Check for yield/deposit intent
-        if any(word in message_lower for word in ['earn yield', 'deposit', 'put to work', 'grow', 'invest']):
+        if any(word in message_lower for word in ['earn yield', 'deposit', 'put to work', 'grow', 'invest', 'take']):
             return {
                 "type": "deposit_yield",
                 "amount": amount,
@@ -126,16 +126,35 @@ class ActionExecutor:
         Returns:
             Formatted response with action field
         """
-        return {
-            "message": action.get('message', 'Confirm this action?'),
-            "action": {
+        try:
+            # Validate action dict
+            if not isinstance(action, dict):
+                return {
+                    "message": "Invalid action format.",
+                    "action": None
+                }
+            
+            # Build action object safely
+            action_obj = {
                 "type": action.get('type'),
-                "amount": action.get('amount'),
-                "protocol": action.get('protocol'),
+                "amount": action.get('amount', 0),
+                "protocol": action.get('protocol', 'Aave'),
                 "recipient": action.get('recipient'),
                 "apy": action.get('apy')
             }
-        }
+            
+            # Remove None values to prevent frontend issues
+            action_obj = {k: v for k, v in action_obj.items() if v is not None}
+            
+            return {
+                "message": action.get('message', 'Confirm this action?'),
+                "action": action_obj
+            }
+        except Exception as e:
+            return {
+                "message": f"Error formatting action: {str(e)}",
+                "action": None
+            }
 
 # Singleton instance
 action_executor = ActionExecutor()

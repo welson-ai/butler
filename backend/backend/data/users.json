@@ -82,6 +82,22 @@
         {
           "role": "assistant",
           "content": "Thanks! I'll keep that in mind for your budget planning."
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 of my USDC and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc fom my wallet and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
         }
       ]
     },
@@ -137,51 +153,6 @@
       "conversation_history": [
         {
           "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": "I can't access your balance right now, but I'm here to help!\n\nHow can I help you manage your crypto? I can:\n  Set up automated payments\n  Optimize yield earnings\n  Create a budget plan\n  Track your finances\n\nWhat would you like to do? You can also tell me your balance if you know it."
-        },
-        {
-          "role": "user",
-          "content": "workers 50 USDC every friday"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "type": "payment_popup",
-            "data": {
-              "title": "Butler detected 1 payment(s)",
-              "payments": [
-                {
-                  "id": 1,
-                  "name": "Workers",
-                  "recipient_name": "",
-                  "wallet_address": "",
-                  "recipient_email": "",
-                  "amount": "50",
-                  "due_date": "",
-                  "frequency": "weekly",
-                  "purpose": "Payroll"
-                }
-              ],
-              "total_detected": 1,
-              "message": "workers 50 USDC every friday"
-            },
-            "message": "I detected 1 payment(s) in your message. Please review and confirm the details."
-          }
-        },
-        {
-          "role": "user",
-          "content": "70% payments 30% savings"
-        },
-        {
-          "role": "assistant",
-          "content": "Who are you paying? (workers, rent, supplier?)"
-        },
-        {
-          "role": "user",
           "content": "take 0.1 from my wallet and earn yield"
         },
         {
@@ -235,6 +206,30 @@
         {
           "role": "assistant",
           "content": "I'll withdraw 0.05 USDC from Aave. Confirm?"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "I can't access your balance right now, but I'm here to help!\n\nHow can I help you manage your crypto? I can:\n  Set up automated payments\n  Optimize yield earnings\n  Create a budget plan\n  Track your finances\n\nWhat would you like to do? You can also tell me your balance if you know it."
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
         }
       ]
     },

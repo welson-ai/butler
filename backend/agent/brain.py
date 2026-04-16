@@ -205,6 +205,18 @@ Return ONLY this exact JSON - no markdown no backticks:
             if action:
                 # Return structured action response for frontend
                 action_response = action_executor.format_action_response(action)
+                # Validate response format to prevent frontend crashes
+                if not isinstance(action_response, dict):
+                    action_response = {
+                        'message': action_response if isinstance(action_response, str) else str(action_response),
+                        'action': None
+                    }
+                # Ensure required fields exist
+                if 'message' not in action_response:
+                    action_response['message'] = 'Action ready to execute.'
+                if 'action' not in action_response:
+                    action_response['action'] = action
+                
                 # Save conversation history
                 self.save_server_conversation_history(wallet_address, user_message, action_response.get('message', ''))
                 return action_response
