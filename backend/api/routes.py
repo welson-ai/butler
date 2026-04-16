@@ -110,6 +110,26 @@ def chat():
             })
         
         # Use new conversation flow for everything else
+        # Initialize fallback data
+        vault_data = {
+            'usdc_balance': 'unavailable',
+            'vault_balance': 0,
+            'aave_deposit': 0,
+            'payment_reserve': 0,
+            'buffer': 0,
+            'yield_earned': 0,
+            'data_available': False
+        }
+        yield_data = {
+            'protocols': {
+                'aave': {'current_apy': 6.2, 'withdrawal_time': 'instant'},
+                'curve': {'current_apy': 5.8, 'withdrawal_time': 'instant'},
+                'pendle': {'current_apy': 8.5, 'withdrawal_time': '2-3 days'}
+            },
+            'data_available': False
+        }
+        
+        # Try to fetch real data, but continue even if it fails
         try:
             from protocols.aave import AaveProtocol
             from agent.executor import ButlerExecutor
@@ -121,22 +141,49 @@ def chat():
             yield_engine = MockYieldEngine()
             yield_monitor = YieldMonitor()
             
-            # Get current balances and yield data
-            usdc_balance = aave.get_usdc_balance(wallet_address)
-            vault_balance = executor.get_user_balance(wallet_address)
-            yield_data = yield_engine.get_all_yields()
+            # Try to get current balances and yield data
+            try:
+                usdc_balance = aave.get_usdc_balance(wallet_address)
+                vault_data['usdc_balance'] = usdc_balance
+                vault_data['data_available'] = True
+                print(f"✅ Successfully fetched USDC balance: {usdc_balance}")
+            except Exception as e:
+                print(f"⚠️ Failed to fetch USDC balance: {e}")
+                vault_data['usdc_balance'] = 'unavailable'
             
-            # Combine vault data
-            vault_data = {
-                'usdc_balance': usdc_balance,
-                'vault_balance': vault_balance.get('vault_balance', 0),
-                'aave_deposit': vault_balance.get('aave_balance', 0),
-                'payment_reserve': vault_balance.get('payment_reserve', 0),
-                'buffer': vault_balance.get('buffer', 0),
-                'yield_earned': vault_balance.get('yield_earned', 0)
-            }
+            try:
+                vault_balance = executor.get_user_balance(wallet_address)
+                if isinstance(vault_balance, dict):
+                    vault_data.update({
+                        'vault_balance': vault_balance.get('vault_balance', 0),
+                        'aave_deposit': vault_balance.get('aave_balance', 0),
+                        'payment_reserve': vault_balance.get('payment_reserve', 0),
+                        'buffer': vault_balance.get('buffer', 0),
+                        'yield_earned': vault_balance.get('yield_earned', 0),
+                        'data_available': True
+                    })
+                    print(f"✅ Successfully fetched vault balance: {vault_balance}")
+                else:
+                    print(f"⚠️ Vault balance returned unexpected format: {vault_balance}")
+            except Exception as e:
+                print(f"⚠️ Failed to fetch vault balance: {e}")
             
-            # Get conversational response
+            try:
+                real_yield_data = yield_engine.get_all_yields()
+                if isinstance(real_yield_data, dict):
+                    yield_data = real_yield_data
+                    yield_data['data_available'] = True
+                    print(f"✅ Successfully fetched yield data: {list(real_yield_data.keys())}")
+                else:
+                    print(f"⚠️ Yield data returned unexpected format: {real_yield_data}")
+            except Exception as e:
+                print(f"⚠️ Failed to fetch yield data: {e}")
+            
+        except Exception as e:
+            print(f"⚠️ Data fetching initialization failed: {e}")
+        
+        # Always attempt to get a conversational response, even with fallback data
+        try:
             response = brain.get_financial_advice(message, wallet_address, user, vault_data, yield_data)
             
             return jsonify({
@@ -151,11 +198,23 @@ def chat():
             })
             
         except Exception as e:
-            print(f"Error in conversation flow: {e}")
+            print(f"❌ Even fallback conversation failed: {e}")
+            # Last resort - provide a helpful canned response based on message type
+            message_lower = message.lower()
+            
+            if any(word in message_lower for word in ['budget', 'manage', 'help me', 'what should i do']):
+                fallback_response = "Got it! To help you budget, first tell me — do you have any upcoming payments like payroll or bills?"
+            elif any(word in message_lower for word in ['yield', 'earning', 'apy', 'protocol']):
+                fallback_response = "Current rates are around 6-8% APY depending on the protocol. Since I can't access your balance right now, how much USDC are you looking to put to work?"
+            elif any(word in message_lower for word in ['pay', 'payment', 'send']):
+                fallback_response = "I can help set up payments! Tell me who you're paying, how much, and how often. For example: 'Pay my workers 5 USDC every Friday'."
+            else:
+                fallback_response = "I'm here to help manage your crypto! Tell me what you'd like to do - set up payments, optimize yield, or create a budget plan?"
+            
             return jsonify({
-                'reply': "I'm having trouble accessing your financial data right now. Please try again in a moment.",
+                'reply': fallback_response,
                 'plan': None,
-                'status': 'data_error'
+                'status': 'fallback_response'
             })
     except Exception as e:
         print(f"DEBUG error: {e}")

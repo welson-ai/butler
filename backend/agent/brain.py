@@ -211,13 +211,26 @@ Return ONLY this exact JSON - no markdown no backticks:
         
         # Get current protocol info
         protocols = yield_data.get('protocols', {})
+        data_available = yield_data.get('data_available', False)
         
         # Determine where funds are currently deployed
         current_protocol = 'Aave'  # Default for now
         current_apy = protocols.get('aave', {}).get('current_apy', 6.2)
         aave_deposit = vault_data.get('aave_deposit', 0)
+        usdc_balance = vault_data.get('usdc_balance', 'unavailable')
         
         # Build response
+        if not data_available or usdc_balance == 'unavailable':
+            response = "I can't access your balance right now, but here are current yield rates:\n\n"
+            
+            # Compare with other protocols
+            for name, data in protocols.items():
+                withdrawal_time = data.get('withdrawal_time', 'unknown')
+                response += f"  {name.title()}: {data.get('current_apy', 0)}% APY ({withdrawal_time} withdrawals)\n"
+            
+            response += "\nHow much USDC are you looking to put to work?"
+            return response
+        
         if aave_deposit > 0:
             response = f"Your {aave_deposit} USDC is in {current_protocol} earning {current_apy}% APY.\n\n"
             response += f"That's about ${aave_deposit * current_apy / 100 / 52:.2f} per week.\n\n"
@@ -332,7 +345,9 @@ Return ONLY this exact JSON - no markdown no backticks:
             
         elif step == 3:
             # User provided allocation - build budget breakdown
-            total_balance = vault_data.get('usdc_balance', 0) + vault_data.get('aave_deposit', 0)
+            usdc_balance = vault_data.get('usdc_balance', 'unavailable')
+            aave_deposit = vault_data.get('aave_deposit', 0)
+            data_available = vault_data.get('data_available', False)
             
             # Parse percentages from user response
             import re
@@ -346,7 +361,12 @@ Return ONLY this exact JSON - no markdown no backticks:
                 response += f"  {payments_pct}% -> payments (auto-pay scheduled)\n"
                 response += f"  {savings_pct}% -> yield (earning on Aave)\n"
                 response += f"  {100 - payments_pct - savings_pct}% -> liquid buffer\n\n"
-                response += f"Total balance: {total_balance} USDC"
+                
+                if data_available and usdc_balance != 'unavailable':
+                    total_balance = usdc_balance + aave_deposit
+                    response += f"Total balance: {total_balance} USDC"
+                else:
+                    response += "I'll need your balance to calculate the exact amounts. How much USDC do you have?"
             else:
                 response = "Thanks! I'll keep that in mind for your budget planning."
             
@@ -424,15 +444,27 @@ Return ONLY this exact JSON - no markdown no backticks:
     def _handle_general_inquiry(self, user_message, wallet_address, user_data, vault_data, yield_data):
         """Handle general inquiries that don't fit specific flows"""
         
-        balance = vault_data.get('usdc_balance', 0) + vault_data.get('aave_deposit', 0)
+        usdc_balance = vault_data.get('usdc_balance', 'unavailable')
+        aave_deposit = vault_data.get('aave_deposit', 0)
+        data_available = vault_data.get('data_available', False)
         
-        response = f"Your current balance: {balance} USDC\n\n"
-        response += "How can I help you manage it? I can:\n"
-        response += "  Set up automated payments\n"
-        response += "  Optimize yield earnings\n"
-        response += "  Create a budget plan\n"
-        response += "  Track your finances\n\n"
-        response += "What would you like to do?"
+        if not data_available or usdc_balance == 'unavailable':
+            response = "I can't access your balance right now, but I'm here to help!\n\n"
+            response += "How can I help you manage your crypto? I can:\n"
+            response += "  Set up automated payments\n"
+            response += "  Optimize yield earnings\n"
+            response += "  Create a budget plan\n"
+            response += "  Track your finances\n\n"
+            response += "What would you like to do? You can also tell me your balance if you know it."
+        else:
+            balance = usdc_balance + aave_deposit
+            response = f"Your current balance: {balance} USDC\n\n"
+            response += "How can I help you manage it? I can:\n"
+            response += "  Set up automated payments\n"
+            response += "  Optimize yield earnings\n"
+            response += "  Create a budget plan\n"
+            response += "  Track your finances\n\n"
+            response += "What would you like to do?"
         
         return response
 
