@@ -98,6 +98,14 @@
         {
           "role": "assistant",
           "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc from my walllet and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
         }
       ]
     },

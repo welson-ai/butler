@@ -165,13 +165,31 @@ export default function App() {
 
       const plan = response.data.plan
       const reply = response.data.reply
+      const action = response.data.action
 
-      // Add Butler response
-      setMessages(prev => [...prev, {
-        role: 'butler',
-        content: reply || 'I understand your request. Let me process that for you.',
-        time: new Date().toISOString()
-      }])
+      // Extract the correct message content
+      let messageContent = reply || 'I understand your request. Let me process that for you.'
+      
+      // Handle structured action responses
+      if (response.data.message && response.data.action) {
+        messageContent = response.data.message
+        
+        // Add action confirmation button
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: messageContent,
+          action: response.data.action,
+          time: new Date().toISOString(),
+          hasAction: true
+        }])
+      } else {
+        // Regular text response
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: messageContent,
+          time: new Date().toISOString()
+        }])
+      }
 
       if (plan) {
         // Check if vault already has enough
@@ -257,6 +275,60 @@ export default function App() {
 
   const formatTime = (time) => {
     return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Handle action confirmation
+  const handleActionConfirmation = async (action) => {
+    try {
+      setIsLoading(true)
+      
+      const response = await axios.post(`${API_BASE}/api/execute-action`, {
+        wallet_address: connectedAddress,
+        action: action
+      })
+
+      if (response.data.status === 'action_executed') {
+        // Success message
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: `Success! ${response.data.message}`,
+          time: new Date().toISOString()
+        }])
+        
+        // Refresh balance
+        fetchBalance()
+      } else {
+        // Error message
+        setMessages(prev => [...prev, {
+          role: 'butler',
+          content: `Error: ${response.data.message}`,
+          time: new Date().toISOString()
+        }])
+      }
+    } catch (error) {
+      console.error('Action execution error:', error)
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: 'Sorry, something went wrong executing the action.',
+        time: new Date().toISOString()
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Get action button text based on action type
+  const getActionButtonText = (action) => {
+    switch (action.type) {
+      case 'deposit_yield':
+        return `Deposit ${action.amount} USDC to ${action.protocol}`
+      case 'withdraw':
+        return `Withdraw ${action.amount} USDC from ${action.protocol}`
+      case 'send_payment':
+        return `Send ${action.amount} USDC`
+      default:
+        return 'Confirm Action'
+    }
   }
 
   if (!isConnected) {
@@ -360,6 +432,19 @@ export default function App() {
                     : 'bg-[#1e1e2a] text-gray-200'
                 }`}>
                   <p className="text-sm">{msg.content}</p>
+                  
+                  {/* Action confirmation button */}
+                  {msg.hasAction && msg.action && (
+                    <div className="mt-3 pt-3 border-t border-gray-600">
+                      <button
+                        onClick={() => handleActionConfirmation(msg.action)}
+                        className="bg-[#7c3aed] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#6d28d9] transition-colors"
+                      >
+                        {getActionButtonText(msg.action)}
+                      </button>
+                    </div>
+                  )}
+                  
                   <p className="text-xs opacity-70 mt-1">{formatTime(msg.time)}</p>
                 </div>
               </div>
