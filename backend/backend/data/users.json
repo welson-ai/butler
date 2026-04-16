@@ -4,43 +4,6 @@
       "conversation_history": [
         {
           "role": "user",
-          "content": "take 0.1 USDC and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
-            "action": {
-              "type": "deposit_yield",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "success": true,
-            "requires_wallet_approval": true,
-            "action_type": "deposit_yield",
-            "amount": 0.1,
-            "protocol": "Aave",
-            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
-            "wallet_action": {
-              "type": "deposit",
-              "amount": 0.1,
-              "protocol": "Aave",
-              "apy": 6.2
-            }
-          }
-        },
-        {
-          "role": "user",
           "content": "take 0.1 usdc and earn yield"
         },
         {
@@ -169,6 +132,43 @@
         {
           "role": "user",
           "content": "yes"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "success": true,
+            "requires_wallet_approval": true,
+            "action_type": "deposit_yield",
+            "amount": 0.1,
+            "protocol": "Aave",
+            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
+            "wallet_action": {
+              "type": "deposit",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc ands earn yiELD"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "YES"
         },
         {
           "role": "assistant",
@@ -190,6 +190,28 @@
       ],
       "user_id": "user_001",
       "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608"
+    },
+    {
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "take 0.1 usdc from my wallet and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        }
+      ],
+      "user_id": "user_002",
+      "wallet_address": "0x123test"
     }
   ]
 }

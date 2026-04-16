@@ -178,13 +178,13 @@ export default function App() {
 
       const data = response.data
       
-      if (data.action?.type === 'deposit_yield') {
+      if (data.reply?.action?.type === 'deposit_yield') {
         setDepositModal({
           open: true,
-          amount: data.action.amount,
-          protocol: data.action.protocol,
-          apy: data.action.apy,
-          estimated: (data.action.amount * data.action.apy / 100 / 12).toFixed(4)
+          amount: data.reply.action.amount,
+          protocol: data.reply.action.protocol,
+          apy: data.reply.action.apy,
+          estimated: (data.reply.action.amount * data.reply.action.apy / 100 / 12).toFixed(4)
         })
         return
       }
