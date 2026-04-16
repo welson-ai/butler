@@ -53,6 +53,12 @@ export default function App() {
   const [sessionYield, setSessionYield] = useState(0)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [activity, setActivity] = useState([])
+  const [depositModal, setDepositModal] = useState({
+    open: false,
+    amount: 0,
+    protocol: 'Aave',
+    apy: 6.2
+  })
 
   // Initialize chat with Butler greeting
   useEffect(() => {
@@ -188,33 +194,16 @@ export default function App() {
           hasAction: true
         }])
         
-        // Trigger wallet action if present
+        // Detect deposit action and show modal
         if (response.data.action?.type === 'deposit_yield') {
-          setTimeout(async () => {
-            try {
-              const amount = parseUnits(response.data.action.amount.toString(), 6)
-              const tx = await writeContractAsync({
-                address: VAULT_ADDRESS,
-                abi: VAULT_ABI,
-                functionName: 'deposit',
-                args: [amount]
-              })
-              
-              setMessages(prev => [...prev, {
-                role: 'butler',
-                content: `✅ Done! ${response.data.action.amount} USDC is now earning ${response.data.action.apy}% APY in ${response.data.action.protocol}`,
-                time: new Date().toISOString()
-              }])
-              
-              fetchBalance()
-            } catch (err) {
-              setMessages(prev => [...prev, {
-                role: 'butler',
-                content: '❌ Transaction cancelled or failed. Try again.',
-                time: new Date().toISOString()
-              }])
-            }
-          }, 1000) // Delay 1 second to show message first
+          const estimated = (response.data.action.amount * response.data.action.apy / 100 / 12).toFixed(4)
+          setDepositModal({
+            open: true,
+            amount: response.data.action.amount,
+            protocol: response.data.action.protocol,
+            apy: response.data.action.apy,
+            estimated: estimated
+          })
         }
       } else if (response.data.message && response.data.message.includes('Please approve deposit')) {
         // Handle wallet approval response from backend
@@ -317,6 +306,41 @@ export default function App() {
   const formatAddress = (addr) => {
     if (!addr) return ''
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
+
+  // Handle deposit modal confirmation
+  const handleDepositConfirm = async () => {
+    setDepositModal({ ...depositModal, open: false })
+    
+    setMessages(prev => [...prev, {
+      role: 'butler',
+      content: 'Got it! Check your wallet for the approval popup.',
+      time: new Date().toISOString()
+    }])
+    
+    try {
+      const amount = parseUnits(depositModal.amount.toString(), 6)
+      const tx = await writeContractAsync({
+        address: VAULT_ADDRESS,
+        abi: VAULT_ABI,
+        functionName: 'deposit',
+        args: [amount]
+      })
+      
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: `✅ ${depositModal.amount} USDC is now earning ${depositModal.apy}% APY in ${depositModal.protocol}. I'll manage this automatically.`,
+        time: new Date().toISOString()
+      }])
+      
+      fetchBalance()
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: '❌ Transaction cancelled. Try again anytime.',
+        time: new Date().toISOString()
+      }])
+    }
   }
 
   const formatTime = (time) => {
@@ -847,6 +871,117 @@ export default function App() {
                 }}
               >
                 {isLoading ? '⏳ Processing...' : '✅ Yes — Activate Butler'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deposit Modal */}
+      {depositModal.open && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#1a1a1a',
+            padding: '32px',
+            borderRadius: '16px',
+            border: '1px solid #333',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '24px'
+            }}>
+              <div style={{
+                fontSize: '24px',
+                marginRight: '12px'
+              }}>💰</div>
+              <div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: 'white'
+                }}>Deposit to Yield</h3>
+                <p style={{
+                  margin: '4px 0 0 0',
+                  fontSize: '14px',
+                  color: '#888'
+                }}>Butler will manage this for you automatically.</p>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div style={{
+              marginBottom: '24px',
+              fontSize: '16px',
+              color: '#ccc'
+            }}>
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ color: '#888' }}>Amount: </span>
+                <span style={{ color: 'white', fontWeight: 'bold' }}>{depositModal.amount} USDC</span>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ color: '#888' }}>Protocol: </span>
+                <span style={{ color: 'white', fontWeight: 'bold' }}>{depositModal.protocol}</span>
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ color: '#888' }}>APY: </span>
+                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>{depositModal.apy}%</span>
+              </div>
+              <div>
+                <span style={{ color: '#888' }}>Est. monthly earnings: </span>
+                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>${depositModal.estimated}</span>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setDepositModal({ ...depositModal, open: false })}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #555',
+                  backgroundColor: 'transparent',
+                  color: '#ccc',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDepositConfirm}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#4ade80',
+                  color: 'black',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Confirm →
               </button>
             </div>
           </div>
