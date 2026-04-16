@@ -37,38 +37,6 @@
       "conversation_history": [
         {
           "role": "user",
-          "content": "take 0.1 of my USDC and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
-        },
-        {
-          "role": "user",
-          "content": "take 0.1 usdc fom my wallet and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
-        },
-        {
-          "role": "user",
-          "content": "take 0.1 usdc from my walllet and earn yield"
-        },
-        {
-          "role": "assistant",
-          "content": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?"
-        },
-        {
-          "role": "user",
-          "content": "take o.1 from my walllet and earn me yield"
-        },
-        {
-          "role": "assistant",
-          "content": "I'll deposit 1.0 USDC into Aave at 6.2% APY. Confirm?"
-        },
-        {
-          "role": "user",
           "content": "take o.1 usdc fom my wallet and earn yield"
         },
         {
@@ -143,6 +111,46 @@
               "apy": 6.2
             }
           }
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc from my wallet and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "yeas"
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks! I'll keep that in mind for your budget planning."
+        },
+        {
+          "role": "user",
+          "content": "help me manage my 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks! I'll keep that in mind for your budget planning."
+        },
+        {
+          "role": "user",
+          "content": "help me budget my 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks! I'll keep that in mind for your budget planning."
         }
       ]
     },

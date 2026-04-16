@@ -201,7 +201,8 @@ Return ONLY this exact JSON - no markdown no backticks:
         """
         try:
             # FIRST: Check for action confirmations (yes/no responses)
-            if user_message.lower().strip() in ['yes', 'confirm', 'ok', 'sure', 'do it']:
+            confirmations = ['yes', 'confirm', 'ok', 'sure', 'do it', 'yeah', 'yep', 'yeas', 'yas', 'y']
+            if user_message.lower().strip() in confirmations:
                 # Check if there was a recent action in conversation history
                 history = self.get_server_conversation_history(wallet_address)
                 recent_messages = history[-4:] if len(history) >= 4 else history
