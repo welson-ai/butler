@@ -538,28 +538,28 @@ Respond with just your question, no extra context."""
             import re
             percentages = re.findall(r'(\d+)%', user_message)
             
-        if percentages:
-            payments_pct = int(percentages[0])
-            savings_pct = int(percentages[1]) if len(percentages) > 1 else 100 - payments_pct
+            if percentages:
+                payments_pct = int(percentages[0])
+                savings_pct = int(percentages[1]) if len(percentages) > 1 else 100 - payments_pct
                 
-            response = f"Here's your budget breakdown:\n"
-            response += f"  {payments_pct}% -> payments (auto-pay scheduled)\n"
-            response += f"  {savings_pct}% -> yield (earning on Aave)\n"
-            response += f"  {100 - payments_pct - savings_pct}% -> liquid buffer\n\n"
+                response = f"Here's your budget breakdown:\n"
+                response += f"  {payments_pct}% -> payments (auto-pay scheduled)\n"
+                response += f"  {savings_pct}% -> yield (earning on Aave)\n"
+                response += f"  {100 - payments_pct - savings_pct}% -> liquid buffer\n\n"
                 
-            if data_available and usdc_balance != 'unavailable':
-                total_balance = usdc_balance + aave_deposit
-                response += f"Total balance: {total_balance} USDC\n\n"
+                if data_available and usdc_balance != 'unavailable':
+                    total_balance = usdc_balance + aave_deposit
+                    response += f"Total balance: {total_balance} USDC\n\n"
+                else:
+                    response += "I'll need your balance to calculate the exact amounts. How much USDC do you have?\n\n"
+                
+                # Ask for email for notifications
+                response += "Last thing - what's your email? I'll send you notifications when payments fire and when your money moves."
+                user_data['conversation_flow']['step'] = 4
             else:
-                response += "I'll need your balance to calculate the exact amounts. How much USDC do you have?\n\n"
-                
-            # Ask for email for notifications
-            response += "Last thing - what's your email? I'll send you notifications when payments fire and when your money moves."
-            user_data['conversation_flow']['step'] = 4
-        else:
-            response = "Thanks! I'll keep that in mind for your budget planning."
-            # Clear conversation state
-            del user_data['conversation_flow']
+                response = "Thanks! I'll keep that in mind for your budget planning."
+                # Clear conversation state
+                del user_data['conversation_flow']
         
         if step == 4:
             # User provided email - save it and ask about recipient emails

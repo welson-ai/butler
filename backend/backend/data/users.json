@@ -98,51 +98,11 @@
         "risk_level": "conservative"
       },
       "conversation_flow": {
-        "flow": "payments",
-        "step": 1,
-        "original_message": "70% payments 30% savings"
+        "flow": "budget",
+        "step": 3,
+        "original_message": "I need to budget 20 USDC"
       },
       "conversation_history": [
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": "Who's the first payment going to, and what's their wallet address?"
-        },
-        {
-          "role": "user",
-          "content": "workers 50 USDC every friday"
-        },
-        {
-          "role": "assistant",
-          "content": "What portion of your 20 USDC would you like to set aside for savings versus putting it toward that 50 USDC worker payment?"
-        },
-        {
-          "role": "user",
-          "content": "I need to budget 20 USDC"
-        },
-        {
-          "role": "assistant",
-          "content": "Do you have any upcoming payments you need to cover, like payroll, bills, or other expenses?"
-        },
-        {
-          "role": "user",
-          "content": "yes"
-        },
-        {
-          "role": "assistant",
-          "content": "Who do you need to pay, and what's their wallet address?"
-        },
-        {
-          "role": "user",
-          "content": "workers 50 USDC every friday"
-        },
-        {
-          "role": "assistant",
-          "content": "Out of your 20 USDC, how much do you want to set aside for the worker payments versus keeping in savings?"
-        },
         {
           "role": "user",
           "content": "I need to pay rent 500 monthly and workers 200 weekly"
@@ -235,6 +195,46 @@
         {
           "role": "assistant",
           "content": "Who are you paying? (workers, rent, supplier?)"
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 from my wallet and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": "I can't access your balance right now, but here are current yield rates:\n\n\nHow much USDC are you looking to put to work?"
+        },
+        {
+          "role": "user",
+          "content": "70% payments 30% savings"
+        },
+        {
+          "role": "assistant",
+          "content": "Who are you paying? (workers, rent, supplier?)"
+        },
+        {
+          "role": "user",
+          "content": "I need to budget 20 USDC"
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have any upcoming payments you need to cover, like payroll, bills, or other expenses?"
+        },
+        {
+          "role": "user",
+          "content": "yes"
+        },
+        {
+          "role": "assistant",
+          "content": "Who do you need to pay, and what's their wallet address?"
+        },
+        {
+          "role": "user",
+          "content": "70% payments 30% savings"
+        },
+        {
+          "role": "assistant",
+          "content": "Got it! Out of your 20 USDC, that's 14 USDC for payments and 6 USDC for savings. Who are you sending the 14 USDC to, and what's their wallet address?"
         }
       ]
     },
