@@ -33,7 +33,7 @@ class ActionExecutor:
         amount = valid_amounts[0] if valid_amounts else 0
         
         # Check for yield/deposit intent
-        if any(word in message_lower for word in ['earn yield', 'deposit', 'put to work', 'put', 'grow', 'invest', 'take', 'help me manage', 'manage', 'work with', 'use my']):
+        if any(word in message_lower for word in ['earn yield', 'deposit', 'put to work', 'put', 'grow', 'invest', 'take']):
             return {
                 "type": "deposit_yield",
                 "amount": amount,
