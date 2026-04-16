@@ -4,16 +4,6 @@
       "conversation_history": [
         {
           "role": "user",
-          "content": "help you manage and budget 20 usdc"
-        },
-        {
-          "role": "assistant",
-          "content": {
-            "message": "I'm having trouble right now. Please try again."
-          }
-        },
-        {
-          "role": "user",
           "content": "help me manage and budget 20 usdc"
         },
         {
@@ -107,6 +97,16 @@
           "content": {
             "message": "I'm having trouble right now. Please try again."
           }
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'm having trouble right now. Please try again."
+          }
         }
       ],
       "user_id": "user_001",
@@ -177,6 +177,22 @@
         {
           "role": "assistant",
           "content": "Do you have any upcoming payments \u2014 payroll, rent, or bills \u2014 that you'd need this $20 USDC for?"
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Hey! Happy to help you make the most of that $20 USDC.\n\nDo you have any upcoming payments \u2014 payroll, rent, bills \u2014 that you'll need to cover soon?"
+        },
+        {
+          "role": "user",
+          "content": "help me manage and budget 20 usdc"
+        },
+        {
+          "role": "assistant",
+          "content": "Hey! 20 USDC \u2014 let's put it to work smartly.\n\nDo you have any upcoming payments \u2014 payroll, rent, bills \u2014 that you'd need to pull from this?"
         }
       ],
       "user_id": "user_002",
