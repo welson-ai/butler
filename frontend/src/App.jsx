@@ -72,7 +72,8 @@ export default function App() {
       const response = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
       setVaultBalance(response.data)
     } catch (error) {
-      console.error('Error fetching balance:', error)
+      console.error('Balance fetch failed:', error)
+      setVaultBalance({ vault_balance: '0.00', usdc_balance: '0.00' }) // show zero instead of crashing
     }
   }
 
@@ -155,7 +156,13 @@ export default function App() {
 
     try {
       // Check vault balance first
-      const balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
+      let balanceRes
+      try {
+        balanceRes = await axios.get(`${API_BASE}/api/balance/${connectedAddress}`)
+      } catch (balanceError) {
+        console.error('Balance fetch failed in sendMessage:', balanceError)
+        balanceRes = { data: { vault_balance: 0, usdc_balance: 0 } }
+      }
       const vaultBalance = balanceRes.data?.vault_balance || 0
 
       const response = await axios.post(`${API_BASE}/api/chat`, {
