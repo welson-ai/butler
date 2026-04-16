@@ -57,7 +57,8 @@ export default function App() {
     open: false,
     amount: 0,
     protocol: 'Aave',
-    apy: 6.2
+    apy: 6.2,
+    estimated: '0.0000'
   })
 
   // Initialize chat with Butler greeting
