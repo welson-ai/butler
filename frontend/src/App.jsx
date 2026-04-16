@@ -885,85 +885,70 @@ export default function App() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          background: 'rgba(0,0,0,0.8)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a',
+            background: '#12121a',
+            border: '1px solid #7c3aed',
+            borderRadius: '20px',
             padding: '32px',
-            borderRadius: '16px',
-            border: '1px solid #333',
-            maxWidth: '400px',
+            maxWidth: '420px',
             width: '90%'
           }}>
-            {/* Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '24px'
+            <h3 style={{
+              margin: '0 0 24px 0',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: 'white',
+              textAlign: 'center'
             }}>
-              <div style={{
-                fontSize: '24px',
-                marginRight: '12px'
-              }}>💰</div>
-              <div>
-                <h3 style={{
-                  margin: 0,
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: 'white'
-                }}>Deposit to Yield</h3>
-                <p style={{
-                  margin: '4px 0 0 0',
-                  fontSize: '14px',
-                  color: '#888'
-                }}>Butler will manage this for you automatically.</p>
-              </div>
-            </div>
-
-            {/* Details */}
+              ?? Confirm Deposit
+            </h3>
+            
             <div style={{
               marginBottom: '24px',
               fontSize: '16px',
               color: '#ccc'
             }}>
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ color: '#888' }}>Amount: </span>
-                <span style={{ color: 'white', fontWeight: 'bold' }}>{depositModal.amount} USDC</span>
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Amount</span>
+                <strong style={{ color: 'white' }}>{depositModal.amount} USDC</strong>
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ color: '#888' }}>Protocol: </span>
-                <span style={{ color: 'white', fontWeight: 'bold' }}>{depositModal.protocol}</span>
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Protocol</span>
+                <strong style={{ color: 'white' }}>{depositModal.protocol}</strong>
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ color: '#888' }}>APY: </span>
-                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>{depositModal.apy}%</span>
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>APY</span>
+                <strong style={{ color: '#4ade80' }}>{depositModal.apy}%</strong>
               </div>
-              <div>
-                <span style={{ color: '#888' }}>Est. monthly earnings: </span>
-                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>${depositModal.estimated}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Est. monthly</span>
+                <strong style={{ color: '#4ade80' }}>${depositModal.estimated} USDC</strong>
               </div>
             </div>
-
-            {/* Buttons */}
+            
             <div style={{
               display: 'flex',
               gap: '12px',
-              justifyContent: 'flex-end'
+              justifyContent: 'space-between'
             }}>
               <button
                 onClick={() => setDepositModal({ ...depositModal, open: false })}
                 style={{
-                  padding: '12px 24px',
-                  borderRadius: '8px',
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '10px',
                   border: '1px solid #555',
-                  backgroundColor: 'transparent',
+                  background: 'transparent',
                   color: '#ccc',
                   cursor: 'pointer',
-                  fontSize: '14px'
+                  fontSize: '15px',
+                  fontWeight: 'bold'
                 }}
               >
                 Cancel
@@ -971,17 +956,18 @@ export default function App() {
               <button
                 onClick={handleDepositConfirm}
                 style={{
-                  padding: '12px 24px',
-                  borderRadius: '8px',
+                  flex: 2,
+                  padding: '14px',
+                  borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: '#4ade80',
-                  color: 'black',
+                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: 'white',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '15px',
                   fontWeight: 'bold'
                 }}
               >
-                Confirm →
+                Confirm ?
               </button>
             </div>
           </div>

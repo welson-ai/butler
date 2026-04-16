@@ -8,14 +8,6 @@
         },
         {
           "role": "assistant",
-          "content": "Hey there! \ud83d\udc4b Welcome! I'm **Crypto Butler**, your friendly financial assistant for all things crypto.\n\nHow can I help you today? Whether you're looking to:\n- \ud83d\udcca **Track** your portfolio\n- \ud83d\udca1 **Learn** about cryptocurrencies\n- \ud83d\udd0d **Research** specific coins\n- \ud83d\udcb0 **Manage** your crypto funds\n\nI'm here to assist! What's on your mind? \ud83d\ude0a"
-        },
-        {
-          "role": "user",
-          "content": "hey"
-        },
-        {
-          "role": "assistant",
           "content": "Hey! Good to have you here. What are you trying to do with your USDC today?"
         },
         {
@@ -29,6 +21,80 @@
         {
           "role": "user",
           "content": "take 0.1 USDC and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "yes"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "success": true,
+            "requires_wallet_approval": true,
+            "action_type": "deposit_yield",
+            "amount": 0.1,
+            "protocol": "Aave",
+            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
+            "wallet_action": {
+              "type": "deposit",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc and earn yield"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "message": "I'll deposit 0.1 USDC into Aave at 6.2% APY. Confirm?",
+            "action": {
+              "type": "deposit_yield",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "yes"
+        },
+        {
+          "role": "assistant",
+          "content": {
+            "success": true,
+            "requires_wallet_approval": true,
+            "action_type": "deposit_yield",
+            "amount": 0.1,
+            "protocol": "Aave",
+            "message": "Please approve deposit of 0.1 USDC to Aave in your wallet.",
+            "wallet_action": {
+              "type": "deposit",
+              "amount": 0.1,
+              "protocol": "Aave",
+              "apy": 6.2
+            }
+          }
+        },
+        {
+          "role": "user",
+          "content": "take 0.1 usdc and earn yield"
         },
         {
           "role": "assistant",
