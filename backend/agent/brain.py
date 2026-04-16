@@ -200,7 +200,31 @@ Return ONLY this exact JSON - no markdown no backticks:
             String response with financial advice or action response
         """
         try:
-            # FIRST: Check for clear action intents
+            # FIRST: Check for action confirmations (yes/no responses)
+            if user_message.lower().strip() in ['yes', 'confirm', 'ok', 'sure', 'do it']:
+                # Check if there was a recent action in conversation history
+                history = self.get_server_conversation_history(wallet_address)
+                recent_messages = history[-4:] if len(history) >= 4 else history
+                
+                # Look for recent action response
+                for msg in reversed(recent_messages):
+                    if msg.get('role') == 'assistant' and isinstance(msg.get('content'), dict):
+                        # Found a pending action, execute it
+                        action = msg.get('content', {}).get('action')
+                        if action:
+                            result = action_executor.execute_action(action, wallet_address)
+                            if result.get('success'):
+                                response = f"Success! {result.get('message')}"
+                            else:
+                                response = f"Error: {result.get('message')}"
+                            
+                            self.save_server_conversation_history(wallet_address, user_message, response)
+                            return response
+                
+                # No pending action found, proceed with normal flow
+                pass
+            
+            # SECOND: Check for clear action intents
             action = action_executor.parse_action_intent(user_message, wallet_address)
             if action:
                 # Return structured action response for frontend
@@ -217,8 +241,8 @@ Return ONLY this exact JSON - no markdown no backticks:
                 if 'action' not in action_response:
                     action_response['action'] = action
                 
-                # Save conversation history
-                self.save_server_conversation_history(wallet_address, user_message, action_response.get('message', ''))
+                # Save conversation history - store full action response for confirmation tracking
+                self.save_server_conversation_history(wallet_address, user_message, action_response)
                 return action_response
             
             # Get conversation history from server-side storage
