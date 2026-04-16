@@ -180,6 +180,25 @@ export default function App() {
           time: new Date().toISOString(),
           hasAction: true
         }])
+        
+        // Auto-trigger MetaMask for deposit actions
+        if (response.data.action.type === 'deposit_yield') {
+          setTimeout(() => {
+            executeDepositAction(response.data.action)
+          }, 1000) // Delay 1 second to show message first
+        }
+      } else if (response.data.message && response.data.message.includes('Please approve deposit')) {
+        // Handle wallet approval response from backend
+        const walletAction = {
+          type: 'deposit',
+          amount: extractAmountFromMessage(response.data.message),
+          protocol: 'Aave',
+          apy: 6.2
+        }
+        
+        setTimeout(() => {
+          executeDepositAction(walletAction)
+        }, 1000)
       } else {
         // Regular text response (old format)
         setMessages(prev => [...prev, {
@@ -273,6 +292,67 @@ export default function App() {
 
   const formatTime = (time) => {
     return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Extract amount from Butler message
+  const extractAmountFromMessage = (message) => {
+    const match = message.match(/(\d+\.?\d*)\s*USDC/i)
+    return match ? parseFloat(match[1]) : 0.1
+  }
+
+  // Execute deposit action via MetaMask
+  const executeDepositAction = async (action) => {
+    try {
+      console.log('🔥 Executing deposit action:', action)
+      
+      const amount = parseUnits(action.amount.toString(), 6)
+      console.log('🔥 Amount parsed:', amount.toString())
+      
+      // Add processing message
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: `🔄 Processing deposit of ${action.amount} USDC to ${action.protocol}...`,
+        time: new Date().toISOString()
+      }])
+      
+      // Approve USDC first
+      console.log('🔥 Approving USDC...')
+      const approveTx = await writeContractAsync({
+        address: USDC_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [VAULT_ADDRESS, amount]
+      })
+      console.log('🔥 USDC approved:', approveTx)
+      
+      // Then deposit to vault
+      console.log('🔥 Depositing to vault...')
+      const depositTx = await writeContractAsync({
+        address: VAULT_ADDRESS,
+        abi: VAULT_ABI,
+        functionName: 'deposit',
+        args: [amount]
+      })
+      console.log('🔥 Vault deposited:', depositTx)
+      
+      // Success message
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: `✅ Done! ${action.amount} USDC is now earning ${action.apy}% APY in ${action.protocol}`,
+        time: new Date().toISOString()
+      }])
+      
+      // Refresh balance
+      fetchBalance()
+      
+    } catch (error) {
+      console.error('🔥 Deposit error:', error)
+      setMessages(prev => [...prev, {
+        role: 'butler',
+        content: '❌ Transaction failed or rejected. Try again.',
+        time: new Date().toISOString()
+      }])
+    }
   }
 
   // Handle action confirmation
