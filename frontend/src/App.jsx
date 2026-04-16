@@ -278,6 +278,7 @@ export default function App() {
   // Handle action confirmation
   const handleActionConfirmation = async (action) => {
     try {
+      console.log('🔥 Action confirmation triggered with action:', action)
       setIsLoading(true)
       
       const response = await axios.post(`${API_BASE}/api/execute-action`, {
@@ -285,7 +286,11 @@ export default function App() {
         action: action
       })
 
+      console.log('🔥 Backend response:', response.data)
+      console.log('🔥 Requires wallet approval:', response.data.requires_wallet_approval)
+
       if (response.data.requires_wallet_approval) {
+        console.log('🔥 Processing wallet approval...')
         // Show wallet approval message
         setMessages(prev => [...prev, {
           role: 'butler',
@@ -296,6 +301,7 @@ export default function App() {
         }])
         
         // Trigger MetaMask transaction
+        console.log('🔥 About to execute wallet action:', response.data.wallet_action)
         await executeWalletAction(response.data.wallet_action)
       } else if (response.data.status === 'action_executed') {
         // Success message (for non-wallet actions)
@@ -330,24 +336,35 @@ export default function App() {
   // Execute wallet action via MetaMask
   const executeWalletAction = async (walletAction) => {
     try {
+      console.log('🔥 Executing wallet action:', walletAction)
+      console.log('🔥 Connected address:', connectedAddress)
+      console.log('🔥 USDC Address:', USDC_ADDRESS)
+      console.log('🔥 Vault Address:', VAULT_ADDRESS)
+      
       const amount = parseUnits(walletAction.amount.toString(), 6)
+      console.log('🔥 Parsed amount:', amount.toString())
       
       if (walletAction.type === 'deposit') {
+        console.log('🔥 Starting USDC approval...')
+        
         // Approve USDC
-        await writeContractAsync({
+        const approveTx = await writeContractAsync({
           address: USDC_ADDRESS,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [VAULT_ADDRESS, amount]
         })
+        console.log('🔥 USDC approved:', approveTx)
         
         // Deposit into vault
+        console.log('🔥 Starting vault deposit...')
         const txHash = await writeContractAsync({
           address: VAULT_ADDRESS,
           abi: VAULT_ABI,
           functionName: 'deposit',
           args: [amount]
         })
+        console.log('🔥 Vault deposited:', txHash)
         
         // Success message
         setMessages(prev => [...prev, {
