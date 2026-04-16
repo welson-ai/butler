@@ -1,1 +1,18 @@
-{"users": []}
+{
+  "users": [
+    {
+      "conversation_history": [
+        {
+          "role": "user",
+          "content": "hey"
+        },
+        {
+          "role": "assistant",
+          "content": "Hey there! \ud83d\udc4b Welcome! I'm **Crypto Butler**, your friendly financial assistant for all things crypto.\n\nHow can I help you today? Whether you're looking to:\n- \ud83d\udcca **Track** your portfolio\n- \ud83d\udca1 **Learn** about cryptocurrencies\n- \ud83d\udd0d **Research** specific coins\n- \ud83d\udcb0 **Manage** your crypto funds\n\nI'm here to assist! What's on your mind? \ud83d\ude0a"
+        }
+      ],
+      "user_id": "user_001",
+      "wallet_address": "0x9d304a71Fe97d58d00D86C8ED6e5161f11Ea8608"
+    }
+  ]
+}
