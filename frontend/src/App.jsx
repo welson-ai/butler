@@ -167,13 +167,11 @@ export default function App() {
       const reply = response.data.reply
       const action = response.data.action
 
-      // Extract the correct message content
-      let messageContent = reply || 'I understand your request. Let me process that for you.'
+      // Extract the correct message content - handle both old and new response formats
+      let messageContent = reply || response.data.message || 'I understand your request. Let me process that for you.'
       
-      // Handle structured action responses
-      if (response.data.message && response.data.action) {
-        messageContent = response.data.message
-        
+      // Handle structured action responses (new format)
+      if (response.data.action) {
         // Add action confirmation button
         setMessages(prev => [...prev, {
           role: 'butler',
@@ -183,7 +181,7 @@ export default function App() {
           hasAction: true
         }])
       } else {
-        // Regular text response
+        // Regular text response (old format)
         setMessages(prev => [...prev, {
           role: 'butler',
           content: messageContent,
@@ -431,7 +429,9 @@ export default function App() {
                     ? 'bg-[#7c3aed] text-white' 
                     : 'bg-[#1e1e2a] text-gray-200'
                 }`}>
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-sm">{typeof msg.content === 'object' 
+  ? msg.content.message || msg.content.reply || JSON.stringify(msg.content)
+  : msg.content}</p>
                   
                   {/* Action confirmation button */}
                   {msg.hasAction && msg.action && (
