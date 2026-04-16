@@ -82,12 +82,10 @@ class ButlerBrain:
                 result = message.content[0].text
                 print(f"[DEBUG] Claude response: {result[:200]}...")
                 return result
-            except anthropic.OverloadedError:
-                print(f"Claude overloaded. Attempt {attempt + 1}/3. Waiting 3 seconds...")
-                time.sleep(3)
+            except anthropic.APIError as e:
+                return {"message": "I'm having trouble right now. Please try again."}
             except Exception as e:
-                raise e
-        raise Exception("Claude API overloaded after 3 attempts")
+                return {"message": "Something went wrong. Please try again."}
     
     def get_conversation_history(self, wallet_address):
         """Get conversation history for a user"""
