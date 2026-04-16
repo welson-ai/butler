@@ -176,9 +176,22 @@ export default function App() {
         message: userMessage
       })
 
-      const plan = response.data.plan
-      const reply = response.data.reply
-      const action = response.data.action
+      const data = response.data
+      
+      if (data.action?.type === 'deposit_yield') {
+        setDepositModal({
+          open: true,
+          amount: data.action.amount,
+          protocol: data.action.protocol,
+          apy: data.action.apy,
+          estimated: (data.action.amount * data.action.apy / 100 / 12).toFixed(4)
+        })
+        return
+      }
+
+      const plan = data.plan
+      const reply = data.reply
+      const action = data.action
 
       // Extract the correct message content - handle both old and new response formats
       let messageContent = reply || response.data.message || 'I understand your request. Let me process that for you.'
@@ -877,102 +890,53 @@ export default function App() {
         </div>
       )}
 
-      {/* Deposit Modal */}
       {depositModal.open && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: '#12121a',
-            border: '1px solid #7c3aed',
-            borderRadius: '20px',
-            padding: '32px',
-            maxWidth: '420px',
-            width: '90%'
-          }}>
-            <h3 style={{
-              margin: '0 0 24px 0',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              color: 'white',
-              textAlign: 'center'
-            }}>
-              ?? Confirm Deposit
-            </h3>
-            
-            <div style={{
-              marginBottom: '24px',
-              fontSize: '16px',
-              color: '#ccc'
-            }}>
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Amount</span>
-                <strong style={{ color: 'white' }}>{depositModal.amount} USDC</strong>
-              </div>
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Protocol</span>
-                <strong style={{ color: 'white' }}>{depositModal.protocol}</strong>
-              </div>
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>APY</span>
-                <strong style={{ color: '#4ade80' }}>{depositModal.apy}%</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Est. monthly</span>
-                <strong style={{ color: '#4ade80' }}>${depositModal.estimated} USDC</strong>
-              </div>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'space-between'
-            }}>
-              <button
-                onClick={() => setDepositModal({ ...depositModal, open: false })}
-                style={{
-                  flex: 1,
-                  padding: '14px',
-                  borderRadius: '10px',
-                  border: '1px solid #555',
-                  background: 'transparent',
-                  color: '#ccc',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  fontWeight: 'bold'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDepositConfirm}
-                style={{
-                  flex: 2,
-                  padding: '14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  fontWeight: 'bold'
-                }}
-              >
-                Confirm ?
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{background:'#1a1a2e',padding:'2rem',borderRadius:'12px',minWidth:'320px',color:'white'}}>
+      <h3 style={{marginBottom:'1rem'}}>?? Confirm Deposit</h3>
+      <p>Amount: <strong>{depositModal.amount} USDC</strong></p>
+      <p>Protocol: <strong>{depositModal.protocol}</strong></p>
+      <p>APY: <strong>{depositModal.apy}%</strong></p>
+      <p>Est. monthly: <strong>${depositModal.estimated} USDC</strong></p>
+      <div style={{display:'flex',gap:'1rem',marginTop:'1.5rem'}}>
+        <button onClick={() => setDepositModal({open:false})} style={{flex:1,padding:'0.75rem',borderRadius:'8px',border:'1px solid #444',background:'transparent',color:'white',cursor:'pointer'}}>
+          Cancel
+        </button>
+        <button onClick={async () => {
+          setDepositModal({open:false})
+          setMessages(prev => [...prev, {
+            role: 'butler',
+            content: 'Got it! Check your wallet for the approval popup.',
+            time: new Date().toISOString()
+          }])
+          try {
+            const amount = parseUnits(depositModal.amount.toString(), 6)
+            const tx = await writeContractAsync({
+              address: VAULT_ADDRESS,
+              abi: VAULT_ABI,
+              functionName: 'deposit',
+              args: [amount]
+            })
+            setMessages(prev => [...prev, {
+              role: 'butler',
+              content: `?? ${depositModal.amount} USDC is now earning ${depositModal.apy}% APY in ${depositModal.protocol}`,
+              time: new Date().toISOString()
+            }])
+            fetchBalance()
+          } catch(err) {
+            setMessages(prev => [...prev, {
+              role: 'butler',
+              content: '?? Transaction cancelled. Try again anytime.',
+              time: new Date().toISOString()
+            }])
+          }
+        }} style={{flex:1,padding:'0.75rem',borderRadius:'8px',background:'#6c63ff',color:'white',border:'none',cursor:'pointer',fontWeight:'bold'}}>
+          Confirm ?
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }
