@@ -113,6 +113,49 @@ class UserStore:
         self.save_data({"users": users})
         return message
     
+    def save_user_data(self, wallet_address: str, user_data: dict) -> str:
+        """
+        Save or update user data including conversation flows and emails
+        
+        Args:
+            wallet_address: User's wallet address
+            user_data: User data dictionary with conversation flows, emails, etc.
+            
+        Returns:
+            Success message
+        """
+        data = self.load_data()
+        users = data.get('users', [])
+        
+        # Find existing user or create new one
+        existing_user = None
+        for user in users:
+            if user.get('wallet_address') == wallet_address:
+                existing_user = user
+                break
+        
+        if existing_user:
+            # Update existing user with new data
+            existing_user.update(user_data)
+            # Keep essential fields if not provided
+            if 'wallet_address' not in user_data:
+                existing_user['wallet_address'] = wallet_address
+            if 'user_id' not in user_data:
+                existing_user['user_id'] = existing_user.get('user_id', f"user_{len(users) + 1:03d}")
+            message = f"Updated user data {wallet_address}"
+        else:
+            # Add new user
+            new_user = user_data.copy()
+            new_user.update({
+                'user_id': f"user_{len(users) + 1:03d}",
+                'wallet_address': wallet_address
+            })
+            users.append(new_user)
+            message = f"Created new user data {wallet_address}"
+        
+        self.save_data({"users": users})
+        return message
+    
     def get_user(self, wallet_address: str) -> dict:
         """
         Get user data by wallet address

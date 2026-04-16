@@ -1,6 +1,7 @@
 from protocols.vault import ButlerVault
 from protocols.mock_yields import MockYieldEngine
 from users.user_store import UserStore
+from notifications.notification_manager import notification_manager
 import os
 from dotenv import load_dotenv
 
@@ -17,6 +18,15 @@ class ButlerExecutor:
         try:
             tx_hash = self.vault.deploy_to_aave(user_address, amount)
             self.store.log_transaction(user_address, 'aave_deposit', amount, tx_hash)
+            
+            # Trigger notification
+            notification_manager.trigger_funds_moved_to_yield(
+                wallet_address=user_address,
+                amount=amount,
+                protocol='Aave',
+                apy=6.2  # Get from yield engine in real implementation
+            )
+            
             return {'success': True, 'tx_hash': tx_hash, 'amount': amount, 'protocol': 'aave'}
         except Exception as e:
             return {'success': False, 'error': str(e)}
@@ -31,8 +41,21 @@ class ButlerExecutor:
 
     def execute_payment(self, user_address):
         try:
+            # Get payment details before execution
+            user = self.store.get_user(user_address)
+            rules = user.get('rules', {}) if user else {}
+            
             tx_hash = self.vault.execute_payment(user_address)
             self.store.log_transaction(user_address, 'payment', 0, tx_hash)
+            
+            # Trigger payment notifications
+            notification_manager.trigger_payment_executed(
+                wallet_address=user_address,
+                amount=rules.get('send_amount', 0),
+                recipient_wallet=rules.get('send_to_address', ''),
+                tx_hash=tx_hash
+            )
+            
             return {'success': True, 'tx_hash': tx_hash}
         except Exception as e:
             return {'success': False, 'error': str(e)}
