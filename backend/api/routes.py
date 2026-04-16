@@ -18,6 +18,7 @@ from agent.brain import ButlerBrain
 from users.rules_engine import RulesEngine
 from users.user_store import UserStore
 from agent.executor import ButlerExecutor
+from agent.payment_parser import payment_parser
 from protocols.mock_yields import MockYieldEngine
 from protocols.aave import AaveProtocol
 
@@ -60,7 +61,7 @@ def chat():
             
             if 'error' in parsed or parsed.get('usdc_total', 0) == 0:
                 return jsonify({
-                    'reply': "Hello! To get started tell me: how much USDC you have, where to send payments, and how often. For example: I have 20 USDC. Send 5 to wallet 0xABC123 every Friday and grow the rest safely.",
+                    'reply': "To get started tell me: how much USDC you have, where to send payments, and how often. For example: I have 20 USDC. Send 5 to wallet 0xABC123 every Friday and grow the rest safely.",
                     'plan': None,
                     'status': 'awaiting_instruction'
                 })
@@ -293,7 +294,7 @@ def register_user():
         
         if existing_user:
             return jsonify({
-                'message': f'Welcome back! Your current plan is active.',
+                'message': f'Your current plan is active.',
                 'plan': existing_user,
                 'status': 'existing'
             })
@@ -313,7 +314,7 @@ def register_user():
             user_store.save_user(wallet_address, empty_plan)
             
             return jsonify({
-                'message': 'Welcome to Crypto Butler! Let\'s set up your automation plan.',
+                'message': 'Let\'s set up your automation plan.',
                 'plan': empty_plan,
                 'status': 'new'
             })
@@ -493,6 +494,109 @@ def get_status():
             'current_day': current_day,
             'timestamp': str(datetime.now())
         })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/api/payment-popup-submit', methods=['POST'])
+def submit_payment_popup():
+    """Handle payment popup form submission"""
+    try:
+        data = request.get_json()
+        wallet_address = data.get('wallet_address')
+        payments = data.get('payments', [])
+        total_budget = data.get('total_budget', 100)
+        
+        if not wallet_address:
+            return jsonify({'error': 'Missing wallet_address'}), 400
+        
+        if not payments:
+            return jsonify({'error': 'No payments provided'}), 400
+        
+        # Generate summary for chat
+        summary = payment_parser.generate_summary_from_user_input(payments)
+        
+        # Generate financial advice
+        advice = payment_parser.generate_financial_advice(payments, total_budget)
+        
+        # Save emails and recipient data
+        for payment in payments:
+            if payment.get('recipient_email'):
+                notification_manager.save_recipient_email(
+                    wallet_address,
+                    payment.get('wallet_address', ''),
+                    payment.get('recipient_email', ''),
+                    payment.get('recipient_name', 'Recipient')
+                )
+        
+        return jsonify({
+            'status': 'payment_plan_ready',
+            'summary': summary,
+            'advice': advice,
+            'payments': payments,
+            'total_committed': sum(p.get('amount', 0) for p in payments),
+            'remaining_for_yield': total_budget - sum(p.get('amount', 0) for p in payments)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api.route('/api/activate-payment-plan', methods=['POST'])
+def activate_payment_plan():
+    """Activate payment plan after user approval"""
+    try:
+        data = request.get_json()
+        wallet_address = data.get('wallet_address')
+        payments = data.get('payments', [])
+        
+        if not wallet_address:
+            return jsonify({'error': 'Missing wallet_address'}), 400
+        
+        # Convert to operational plan format
+        total_amount = sum(p.get('amount', 0) for p in payments)
+        
+        # Create plan for first payment (simplified for demo)
+        if payments:
+            first_payment = payments[0]
+            plan_data = {
+                'usdc_total': total_amount,
+                'send_amount': first_payment.get('amount', 0),
+                'send_to_address': first_payment.get('wallet_address', ''),
+                'send_schedule': first_payment.get('frequency', 'weekly'),
+                'yield_requested': True,
+                'risk_level': 'conservative'
+            }
+            
+            # Build and save operational plan
+            plan = rules_engine.build_plan(plan_data, wallet_address)
+            is_valid = rules_engine.validate_plan(plan)
+            
+            if is_valid:
+                user_store.save_user(wallet_address, plan)
+                
+                # Send notifications to all recipients
+                for payment in payments:
+                    if payment.get('recipient_email'):
+                        notification_manager.trigger_payment_scheduled(
+                            wallet_address,
+                            payment.get('recipient_name', 'Recipient'),
+                            payment.get('amount', 0),
+                            payment.get('frequency', 'weekly'),
+                            datetime.now()
+                        )
+                
+                return jsonify({
+                    'status': 'plan_activated',
+                    'message': 'Payment plan activated successfully! All schedules are now active.',
+                    'plan': plan
+                })
+            else:
+                return jsonify({
+                    'status': 'validation_failed',
+                    'message': 'Plan validation failed. Please check payment details.'
+                })
+        else:
+            return jsonify({'error': 'No payments to activate'}), 400
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

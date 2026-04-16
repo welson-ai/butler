@@ -3,8 +3,12 @@ import time
 import json
 import os
 from dotenv import load_dotenv
+from .payment_parser import payment_parser
 
 load_dotenv()
+
+# Server-side conversation history storage
+_conversation_history = {}
 
 class ButlerBrain:
     def __init__(self):
@@ -23,6 +27,35 @@ class ButlerBrain:
         print("4. Advice Request Flow - Payment timing checks first")
         print("5. Gas/Fees Flow - Base network awareness (cents, not $)")
         print("=" * 60)
+    
+    def get_server_conversation_history(self, wallet_address):
+        """Get conversation history from server-side storage"""
+        global _conversation_history
+        return _conversation_history.get(wallet_address, [])
+    
+    def save_server_conversation_history(self, wallet_address, user_message, assistant_response):
+        """Save conversation history to server-side storage"""
+        global _conversation_history
+        
+        if wallet_address not in _conversation_history:
+            _conversation_history[wallet_address] = []
+        
+        # Add new messages to history
+        _conversation_history[wallet_address].append({
+            "role": "user", 
+            "content": user_message
+        })
+        _conversation_history[wallet_address].append({
+            "role": "assistant", 
+            "content": assistant_response
+        })
+        
+        # Keep only last 20 messages to avoid token limits
+        if len(_conversation_history[wallet_address]) > 20:
+            _conversation_history[wallet_address] = _conversation_history[wallet_address][-20:]
+        
+        # Also save to database for persistence
+        self.save_conversation_history(wallet_address, user_message, assistant_response)
 
     def _call_claude(self, system_prompt, user_message, max_tokens=1000, conversation_history=None):
         # Debug: Print the actual system prompt being used
@@ -166,8 +199,8 @@ Return ONLY this exact JSON - no markdown no backticks:
             String response with financial advice
         """
         try:
-            # Get conversation history
-            conversation_history = self.get_conversation_history(wallet_address)
+            # Get conversation history from server-side storage
+            conversation_history = self.get_server_conversation_history(wallet_address)
             
             # Check if this is a follow-up response in an ongoing conversation
             if user_data and 'conversation_flow' in user_data:
@@ -189,8 +222,8 @@ Return ONLY this exact JSON - no markdown no backticks:
                 else:
                     response = self._handle_general_inquiry(user_message, wallet_address, user_data, vault_data, yield_data)
             
-            # Save conversation history
-            self.save_conversation_history(wallet_address, user_message, response)
+            # Save conversation history to server-side storage
+            self.save_server_conversation_history(wallet_address, user_message, response)
             
             return response
             
@@ -230,8 +263,8 @@ Return ONLY this exact JSON - no markdown no backticks:
     
     def _start_budget_flow(self, user_message, wallet_address, user_data, vault_data, yield_data):
         """FLOW 1 - Budget/Management conversation"""
-        # Get conversation history
-        conversation_history = self.get_conversation_history(wallet_address)
+        # Get conversation history from server-side storage
+        conversation_history = self.get_server_conversation_history(wallet_address)
         
         # Check if user already has payments scheduled
         has_payments = user_data and user_data.get('rules', {}).get('send_amount', 0) > 0
@@ -334,6 +367,22 @@ Respond with just your question, no extra context."""
     
     def _start_payment_flow(self, user_message, wallet_address, user_data, vault_data, yield_data):
         """FLOW 3 - Payment setup conversation"""
+        
+        # Check if this is a complex payment request that needs popup
+        parsed = payment_parser.parse_payment_intent(user_message)
+        
+        if parsed.get('requires_popup') and len(parsed.get('detected_payments', [])) > 0:
+            # Generate popup data for frontend
+            popup_data = payment_parser.generate_popup_data(parsed)
+            
+            response = {
+                'type': 'payment_popup',
+                'data': popup_data,
+                'message': f"I detected {len(parsed['detected_payments'])} payment(s) in your message. Please review and confirm the details."
+            }
+            return response
+        
+        # Simple payment setup - continue with normal flow
         response = "Who are you paying? (workers, rent, supplier?)"
         
         # Save conversation state
@@ -414,8 +463,8 @@ Respond with just your question, no extra context."""
         flow = conversation.get('flow')
         step = conversation.get('step')
         
-        # Get conversation history
-        conversation_history = self.get_conversation_history(wallet_address)
+        # Get conversation history from server-side storage
+        conversation_history = self.get_server_conversation_history(wallet_address)
         
         if flow == 'budget':
             return self._continue_budget_flow(user_message, wallet_address, user_data, vault_data, yield_data, step, conversation_history)
@@ -489,30 +538,30 @@ Respond with just your question, no extra context."""
             import re
             percentages = re.findall(r'(\d+)%', user_message)
             
-            if percentages:
-                payments_pct = int(percentages[0])
-                savings_pct = int(percentages[1]) if len(percentages) > 1 else 100 - payments_pct
+        if percentages:
+            payments_pct = int(percentages[0])
+            savings_pct = int(percentages[1]) if len(percentages) > 1 else 100 - payments_pct
                 
-                response = f"Here's your budget breakdown:\n"
-                response += f"  {payments_pct}% -> payments (auto-pay scheduled)\n"
-                response += f"  {savings_pct}% -> yield (earning on Aave)\n"
-                response += f"  {100 - payments_pct - savings_pct}% -> liquid buffer\n\n"
+            response = f"Here's your budget breakdown:\n"
+            response += f"  {payments_pct}% -> payments (auto-pay scheduled)\n"
+            response += f"  {savings_pct}% -> yield (earning on Aave)\n"
+            response += f"  {100 - payments_pct - savings_pct}% -> liquid buffer\n\n"
                 
-                if data_available and usdc_balance != 'unavailable':
-                    total_balance = usdc_balance + aave_deposit
-                    response += f"Total balance: {total_balance} USDC\n\n"
-                else:
-                    response += "I'll need your balance to calculate the exact amounts. How much USDC do you have?\n\n"
-                
-                # Ask for email for notifications
-                response += "Last thing — what's your email? I'll send you notifications when payments fire and when your money moves."
-                user_data['conversation_flow']['step'] = 4
+            if data_available and usdc_balance != 'unavailable':
+                total_balance = usdc_balance + aave_deposit
+                response += f"Total balance: {total_balance} USDC\n\n"
             else:
-                response = "Thanks! I'll keep that in mind for your budget planning."
-                # Clear conversation state
-                del user_data['conversation_flow']
+                response += "I'll need your balance to calculate the exact amounts. How much USDC do you have?\n\n"
+                
+            # Ask for email for notifications
+            response += "Last thing - what's your email? I'll send you notifications when payments fire and when your money moves."
+            user_data['conversation_flow']['step'] = 4
+        else:
+            response = "Thanks! I'll keep that in mind for your budget planning."
+            # Clear conversation state
+            del user_data['conversation_flow']
         
-        elif step == 4:
+        if step == 4:
             # User provided email - save it and ask about recipient emails
             import re
             email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
