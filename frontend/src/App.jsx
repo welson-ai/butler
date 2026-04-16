@@ -540,22 +540,22 @@ export default function App() {
             <div className="space-y-3 flex-1">
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Wallet USDC</p>
-                <p className="text-2xl font-bold">${vaultBalance.usdc_balance?.toFixed(2) || '0.00'}</p>
+                <p className="text-2xl font-bold">${parseFloat(vaultBalance.usdc_balance || 0).toFixed(2)}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Vault Balance</p>
-                <p className="text-xl font-semibold text-blue-400">${vaultBalance.vault_balance?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-blue-400">${parseFloat(vaultBalance.vault_balance || 0).toFixed(2)}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Aave Deposit</p>
-                <p className="text-xl font-semibold text-green-400">${vaultBalance.aave_deposit?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-green-400">${parseFloat(vaultBalance.aave_deposit || 0).toFixed(2)}</p>
               </div>
 
               <div className="bg-[#12121a] p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Payment Reserve</p>
-                <p className="text-xl font-semibold text-purple-400">${vaultBalance.payment_reserve?.toFixed(2) || '0.00'}</p>
+                <p className="text-xl font-semibold text-purple-400">${parseFloat(vaultBalance.payment_reserve || 0).toFixed(2)}</p>
               </div>
             </div>
           )}
@@ -677,7 +677,7 @@ export default function App() {
               {Object.entries(yields).map(([protocol, apy]) => (
                 <div key={protocol} className="bg-[#12121a] p-3 rounded-lg flex justify-between items-center">
                   <span className="text-gray-400 capitalize">{protocol}</span>
-                  <span className="text-green-400 font-bold">{parseFloat(apy).toFixed(1)}%</span>
+                  <span className="text-green-400 font-bold">{parseFloat(apy || 0).toFixed(1)}%</span>
                 </div>
               ))}
             </div>
@@ -710,7 +710,7 @@ export default function App() {
             <div className="bg-[#12121a] p-4 rounded-xl text-center">
               <div className="text-gray-400 text-sm mb-2">Projected Yield (since activation)</div>
               <div className="text-green-400 text-2xl font-bold">
-                +{sessionYield.toFixed(8)} USDC
+                +{parseFloat(sessionYield || 0).toFixed(8)} USDC
               </div>
               <div className="text-gray-500 text-xs mt-2">
                 Based on {yieldStatus?.apy}% APY — updates on compound
