@@ -188,10 +188,32 @@ export default function App() {
           hasAction: true
         }])
         
-        // Auto-trigger MetaMask for deposit actions
-        if (response.data.action.type === 'deposit_yield') {
-          setTimeout(() => {
-            executeDepositAction(response.data.action)
+        // Trigger wallet action if present
+        if (response.data.action?.type === 'deposit_yield') {
+          setTimeout(async () => {
+            try {
+              const amount = parseUnits(response.data.action.amount.toString(), 6)
+              const tx = await writeContractAsync({
+                address: VAULT_ADDRESS,
+                abi: VAULT_ABI,
+                functionName: 'deposit',
+                args: [amount]
+              })
+              
+              setMessages(prev => [...prev, {
+                role: 'butler',
+                content: `✅ Done! ${response.data.action.amount} USDC is now earning ${response.data.action.apy}% APY in ${response.data.action.protocol}`,
+                time: new Date().toISOString()
+              }])
+              
+              fetchBalance()
+            } catch (err) {
+              setMessages(prev => [...prev, {
+                role: 'butler',
+                content: '❌ Transaction cancelled or failed. Try again.',
+                time: new Date().toISOString()
+              }])
+            }
           }, 1000) // Delay 1 second to show message first
         }
       } else if (response.data.message && response.data.message.includes('Please approve deposit')) {
